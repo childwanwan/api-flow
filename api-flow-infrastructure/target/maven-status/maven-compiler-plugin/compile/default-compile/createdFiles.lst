@@ -1,0 +1,12 @@
+com\apigateway\infrastructure\persistence\mybatis\config\ApiConfigConverter.class
+com\apigateway\infrastructure\persistence\mybatis\config\entity\ApiConfigDO$ApiConfigDOBuilder.class
+com\apigateway\infrastructure\persistence\mybatis\config\ApiConfigConverterImpl.class
+com\apigateway\infrastructure\persistence\mybatis\task\TaskConverter.class
+com\apigateway\infrastructure\persistence\mybatis\task\TaskMapper.class
+com\apigateway\infrastructure\persistence\mybatis\config\ApiConfigMapper.class
+com\apigateway\infrastructure\persistence\mybatis\config\ApiConfigRepositoryImpl.class
+com\apigateway\infrastructure\persistence\mybatis\config\entity\ApiConfigDO.class
+com\apigateway\infrastructure\persistence\mybatis\task\entity\TaskDO$TaskDOBuilder.class
+com\apigateway\infrastructure\persistence\mybatis\task\TaskConverterImpl.class
+com\apigateway\infrastructure\persistence\mybatis\task\entity\TaskDO.class
+com\apigateway\infrastructure\persistence\mybatis\task\TaskRepositoryImpl.class
