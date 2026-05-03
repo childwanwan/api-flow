@@ -1,133 +1,158 @@
 package com.apigateway.interfaces.web;
 
-import com.apigateway.application.service.ApiConfigApplicationService;
+import com.apigateway.application.config.ApiConfigApplicationService;
+import com.apigateway.application.config.command.ApiConfigCreateCommand;
+import com.apigateway.application.config.command.ApiConfigDeleteCommand;
+import com.apigateway.application.config.command.ApiConfigDisableCommand;
+import com.apigateway.application.config.command.ApiConfigEnableCommand;
+import com.apigateway.application.config.command.ApiConfigUpdateCommand;
 import com.apigateway.common.result.Result;
-import com.apigateway.domain.api.config.enums.ApiConfigStatus;
-import com.apigateway.domain.api.config.model.ApiConfigEntity;
-import com.apigateway.interfaces.web.dto.ApiConfigCreateRequest;
-import com.apigateway.interfaces.web.dto.ApiConfigUpdateRequest;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.apigateway.domain.config.enums.ApiConfigStatus;
+import com.apigateway.domain.config.model.ApiConfigEntity;
+import com.apigateway.interfaces.config.ApiConfigController;
+import com.apigateway.interfaces.config.dto.ApiConfigCreateRequest;
+import com.apigateway.interfaces.config.dto.ApiConfigUpdateRequest;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.http.MediaType;
-import org.springframework.test.web.servlet.MockMvc;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
 
-import java.util.Optional;
-
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.when;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.mockito.Mockito.*;
 
-@WebMvcTest(ApiConfigController.class)
-class ApiConfigControllerTest {
+public class ApiConfigControllerTest {
 
-    @Autowired
-    private MockMvc mockMvc;
-
-    @Autowired
-    private ObjectMapper objectMapper;
-
-    @MockBean
+    @Mock
     private ApiConfigApplicationService apiConfigApplicationService;
 
-    @Test
-    void shouldCreateApiConfig() throws Exception {
-        ApiConfigCreateRequest request = new ApiConfigCreateRequest();
-        request.setApiCode("TEST_API_001");
-        request.setApiName("Test API");
-        request.setRequestTimeoutMs(30000);
-        request.setAutoRetryCount(3);
+    private ApiConfigController apiConfigController;
 
-        ApiConfigEntity entity = ApiConfigEntity.builder()
-                .id(1L)
-                .apiCode("TEST_API_001")
-                .apiName("Test API")
-                .build();
-
-        when(apiConfigApplicationService.createApiConfig(any(ApiConfigEntity.class))).thenReturn(entity);
-
-        mockMvc.perform(post("/api/v1/api-configs")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true));
+    @BeforeEach
+    void setUp() {
+        MockitoAnnotations.openMocks(this);
+        apiConfigController = new ApiConfigController(apiConfigApplicationService);
     }
 
     @Test
-    void shouldGetApiConfigByApiCode() throws Exception {
+    void shouldCreateConfig() {
+        ApiConfigCreateRequest request = ApiConfigCreateRequest.builder()
+                .groupNo("GROUP_001")
+                .apiCode("TEST_API_001")
+                .apiName("Test API")
+                .requestTimeoutMs(30000L)
+                .autoRetryCount(3)
+                .operator("admin")
+                .build();
+
         ApiConfigEntity entity = ApiConfigEntity.builder()
                 .id(1L)
+                .groupNo("GROUP_001")
                 .apiCode("TEST_API_001")
                 .apiName("Test API")
                 .status(ApiConfigStatus.ENABLED)
                 .build();
 
-        when(apiConfigApplicationService.getApiConfigByApiCode("TEST_API_001")).thenReturn(Optional.of(entity));
+        when(apiConfigApplicationService.createConfig(any(ApiConfigCreateCommand.class))).thenReturn(entity);
 
-        mockMvc.perform(get("/api/v1/api-configs/api-code/TEST_API_001"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true));
+        Result<ApiConfigEntity> result = apiConfigController.createConfig(request);
+
+        assertTrue(result.isSuccess());
+        assertEquals("TEST_API_001", result.getData().getApiCode());
+        verify(apiConfigApplicationService).createConfig(any(ApiConfigCreateCommand.class));
     }
 
     @Test
-    void shouldUpdateApiConfig() throws Exception {
-        ApiConfigUpdateRequest request = new ApiConfigUpdateRequest();
-        request.setApiName("Updated API");
-        request.setRequestTimeoutMs(60000);
+    void shouldUpdateConfig() {
+        ApiConfigUpdateRequest request = ApiConfigUpdateRequest.builder()
+                .apiCode("TEST_API_001")
+                .apiName("Updated API")
+                .requestTimeoutMs(60000L)
+                .operator("admin")
+                .build();
 
         ApiConfigEntity entity = ApiConfigEntity.builder()
                 .id(1L)
                 .apiCode("TEST_API_001")
                 .apiName("Updated API")
+                .status(ApiConfigStatus.ENABLED)
                 .build();
 
-        when(apiConfigApplicationService.updateApiConfig(any(Long.class), any(ApiConfigEntity.class))).thenReturn(entity);
+        when(apiConfigApplicationService.updateConfig(any(ApiConfigUpdateCommand.class))).thenReturn(entity);
 
-        mockMvc.perform(put("/api/v1/api-configs/1")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true));
+        Result<ApiConfigEntity> result = apiConfigController.updateConfig(request);
+
+        assertTrue(result.isSuccess());
+        assertEquals("Updated API", result.getData().getApiName());
+        verify(apiConfigApplicationService).updateConfig(any(ApiConfigUpdateCommand.class));
     }
 
     @Test
-    void shouldEnableApiConfig() throws Exception {
+    void shouldGetConfig() {
+        ApiConfigEntity entity = ApiConfigEntity.builder()
+                .id(1L)
+                .apiCode("TEST_API_001")
+                .apiName("Test API")
+                .status(ApiConfigStatus.ENABLED)
+                .build();
+
+        when(apiConfigApplicationService.getConfig("TEST_API_001")).thenReturn(entity);
+
+        Result<ApiConfigEntity> result = apiConfigController.getConfig("TEST_API_001");
+
+        assertTrue(result.isSuccess());
+        assertEquals("TEST_API_001", result.getData().getApiCode());
+        verify(apiConfigApplicationService).getConfig("TEST_API_001");
+    }
+
+    @Test
+    void shouldEnableConfig() {
         ApiConfigEntity entity = ApiConfigEntity.builder()
                 .id(1L)
                 .apiCode("TEST_API_001")
                 .status(ApiConfigStatus.ENABLED)
                 .build();
 
-        when(apiConfigApplicationService.enableApiConfig(1L)).thenReturn(entity);
+        when(apiConfigApplicationService.enableConfig(any(ApiConfigEnableCommand.class))).thenReturn(entity);
 
-        mockMvc.perform(put("/api/v1/api-configs/1/enable"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true));
+        Result<ApiConfigEntity> result = apiConfigController.enableConfig("TEST_API_001", "admin");
+
+        assertTrue(result.isSuccess());
+        assertEquals(ApiConfigStatus.ENABLED, result.getData().getStatus());
+        verify(apiConfigApplicationService).enableConfig(any(ApiConfigEnableCommand.class));
     }
 
     @Test
-    void shouldDisableApiConfig() throws Exception {
+    void shouldDisableConfig() {
         ApiConfigEntity entity = ApiConfigEntity.builder()
                 .id(1L)
                 .apiCode("TEST_API_001")
                 .status(ApiConfigStatus.DISABLED)
                 .build();
 
-        when(apiConfigApplicationService.disableApiConfig(1L)).thenReturn(entity);
+        when(apiConfigApplicationService.disableConfig(any(ApiConfigDisableCommand.class))).thenReturn(entity);
 
-        mockMvc.perform(put("/api/v1/api-configs/1/disable"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true));
+        Result<ApiConfigEntity> result = apiConfigController.disableConfig("TEST_API_001", "admin");
+
+        assertTrue(result.isSuccess());
+        assertEquals(ApiConfigStatus.DISABLED, result.getData().getStatus());
+        verify(apiConfigApplicationService).disableConfig(any(ApiConfigDisableCommand.class));
     }
 
     @Test
-    void shouldDeleteApiConfig() throws Exception {
-        mockMvc.perform(delete("/api/v1/api-configs/1"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true));
+    void shouldDeleteConfig() {
+        ApiConfigEntity entity = ApiConfigEntity.builder()
+                .id(1L)
+                .apiCode("TEST_API_001")
+                .status(ApiConfigStatus.DISABLED)
+                .build();
+
+        when(apiConfigApplicationService.deleteConfig(any(ApiConfigDeleteCommand.class))).thenReturn(entity);
+
+        Result<ApiConfigEntity> result = apiConfigController.deleteConfig("TEST_API_001", "admin");
+
+        assertTrue(result.isSuccess());
+        verify(apiConfigApplicationService).deleteConfig(any(ApiConfigDeleteCommand.class));
     }
 
 }

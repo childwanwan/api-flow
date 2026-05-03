@@ -6,8 +6,6 @@ import com.apigateway.application.config.command.ApiConfigDeleteCommand;
 import com.apigateway.application.config.command.ApiConfigDisableCommand;
 import com.apigateway.application.config.command.ApiConfigEnableCommand;
 import com.apigateway.application.config.command.ApiConfigUpdateCommand;
-import com.apigateway.common.exception.BusinessException;
-import com.apigateway.common.exception.ErrorCode;
 import com.apigateway.domain.config.enums.ApiConfigStatus;
 import com.apigateway.domain.config.model.ApiConfigEntity;
 import com.apigateway.domain.config.service.ApiConfigDomainService;
@@ -17,10 +15,8 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
@@ -37,14 +33,14 @@ class ApiConfigApplicationServiceTest {
     void shouldCreateApiConfigSuccessfully() {
         ApiConfigCreateCommand command = createApiConfigCreateCommand();
         ApiConfigEntity entity = createApiConfigEntity();
-        when(apiConfigDomainService.createConfig(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any()))
+        when(apiConfigDomainService.createConfig(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any()))
                 .thenReturn(entity);
 
         ApiConfigEntity created = apiConfigApplicationService.createConfig(command);
 
         assertThat(created).isNotNull();
         verify(apiConfigDomainService).createConfig(
-                any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any()
+                any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any()
         );
     }
 
@@ -52,7 +48,7 @@ class ApiConfigApplicationServiceTest {
     void shouldUpdateApiConfigSuccessfully() {
         ApiConfigUpdateCommand command = createApiConfigUpdateCommand();
         ApiConfigEntity entity = createApiConfigEntity();
-        when(apiConfigDomainService.updateConfig(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any()))
+        when(apiConfigDomainService.updateConfig(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any()))
                 .thenReturn(entity);
 
         ApiConfigEntity updated = apiConfigApplicationService.updateConfig(command);

@@ -8,11 +8,13 @@ import com.apigateway.common.exception.BusinessException;
 import com.apigateway.common.exception.ErrorCode;
 import com.apigateway.domain.config.model.ApiConfigEntity;
 import com.apigateway.domain.config.repository.ApiConfigRepository;
+import com.apigateway.domain.config.query.ApiConfigQuery;
 import com.apigateway.domain.config.enums.ApiConfigStatus;
 import com.apigateway.domain.task.enums.ActionType;
 import com.apigateway.domain.task.enums.TaskStatus;
 import com.apigateway.domain.task.model.TaskEntity;
 import com.apigateway.domain.task.repository.TaskRepository;
+import com.apigateway.domain.task.query.TaskQuery;
 import com.apigateway.domain.task.service.TaskDomainService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -46,7 +48,7 @@ class TaskApplicationServiceTest {
         ApiConfigEntity config = createApiConfigEntity();
         TaskEntity task = createTaskEntity();
 
-        when(apiConfigRepository.findByApiCode(command.getApiCode())).thenReturn(config);
+        when(apiConfigRepository.query(ApiConfigQuery.builder().apiCode(command.getApiCode()).build())).thenReturn(config);
         when(taskDomainService.createTask(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()))
                 .thenReturn(task);
 
@@ -59,7 +61,7 @@ class TaskApplicationServiceTest {
     @Test
     void shouldThrowExceptionWhenApiNotFound() {
         TaskSubmitCommand command = createTaskSubmitCommand();
-        when(apiConfigRepository.findByApiCode(command.getApiCode())).thenReturn(null);
+        when(apiConfigRepository.query(ApiConfigQuery.builder().apiCode(command.getApiCode()).build())).thenReturn(null);
 
         assertThatThrownBy(() -> taskApplicationService.submitTask(command))
                 .isInstanceOf(BusinessException.class)
@@ -69,7 +71,7 @@ class TaskApplicationServiceTest {
     @Test
     void shouldGetTaskSuccessfully() {
         TaskEntity task = createTaskEntity();
-        when(taskRepository.findByTaskNo(task.getTaskNo())).thenReturn(task);
+        when(taskRepository.query(TaskQuery.builder().taskNo(task.getTaskNo()).build())).thenReturn(task);
 
         TaskEntity found = taskApplicationService.getTask(task.getTaskNo());
 
@@ -79,7 +81,7 @@ class TaskApplicationServiceTest {
 
     @Test
     void shouldThrowExceptionWhenTaskNotFound() {
-        when(taskRepository.findByTaskNo("NON_EXISTENT")).thenReturn(null);
+        when(taskRepository.query(TaskQuery.builder().taskNo("NON_EXISTENT").build())).thenReturn(null);
 
         assertThatThrownBy(() -> taskApplicationService.getTask("NON_EXISTENT"))
                 .isInstanceOf(BusinessException.class)

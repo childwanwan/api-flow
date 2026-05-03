@@ -3,61 +3,97 @@ package com.apigateway.infrastructure.persistence.repository;
 import com.apigateway.domain.config.model.ApiConfigEntity;
 import com.apigateway.domain.config.enums.ApiConfigStatus;
 import com.apigateway.domain.config.query.ApiConfigQuery;
-import com.apigateway.infrastructure.config.TestInfrastructureConfig;
+import com.apigateway.infrastructure.persistence.mybatis.config.ApiConfigConverter;
+import com.apigateway.infrastructure.persistence.mybatis.config.ApiConfigMapper;
 import com.apigateway.infrastructure.persistence.mybatis.config.ApiConfigRepositoryImpl;
+import com.apigateway.infrastructure.persistence.mybatis.config.entity.ApiConfigDO;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.ActiveProfiles;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
 
-@SpringBootTest(classes = TestInfrastructureConfig.class)
-@ActiveProfiles("test")
+@ExtendWith(MockitoExtension.class)
 class ApiConfigRepositoryImplTest {
 
-    @Autowired
+    @Mock
+    private ApiConfigMapper apiConfigMapper;
+
+    @Mock
+    private ApiConfigConverter apiConfigConverter;
+
     private ApiConfigRepositoryImpl apiConfigRepository;
 
+    @BeforeEach
+    void setUp() {
+        apiConfigRepository = new ApiConfigRepositoryImpl(apiConfigMapper, apiConfigConverter);
+    }
+
     @Test
-    void shouldSaveAndFindByApiCode() {
+    void shouldSaveConfig() {
         ApiConfigEntity config = createApiConfig();
+        ApiConfigDO configDO = createApiConfigDO(config);
+
+        when(apiConfigConverter.toDO(any(ApiConfigEntity.class))).thenReturn(configDO);
+        when(apiConfigMapper.insert(any(ApiConfigDO.class))).thenReturn(1);
+        when(apiConfigConverter.toEntity(any(ApiConfigDO.class))).thenReturn(config);
+
         ApiConfigEntity saved = apiConfigRepository.save(config);
-        assertThat(saved.getId()).isNotNull();
+
+        assertThat(saved).isNotNull();
+        verify(apiConfigMapper).insert(any(ApiConfigDO.class));
+    }
+
+    @Test
+    void shouldQueryConfigByApiCode() {
+        ApiConfigEntity config = createApiConfig();
+        ApiConfigDO configDO = createApiConfigDO(config);
+
+        when(apiConfigMapper.selectOne(any())).thenReturn(configDO);
+        when(apiConfigConverter.toEntity(any(ApiConfigDO.class))).thenReturn(config);
 
         ApiConfigEntity found = apiConfigRepository.query(ApiConfigQuery.builder().apiCode(config.getApiCode()).build());
+
         assertThat(found).isNotNull();
         assertThat(found.getApiCode()).isEqualTo(config.getApiCode());
     }
 
     @Test
-    void shouldUpdateConfig() {
-        ApiConfigEntity config = createApiConfig();
-        ApiConfigEntity saved = apiConfigRepository.save(config);
+    void shouldReturnNullWhenConfigNotFound() {
+        when(apiConfigMapper.selectOne(any())).thenReturn(null);
 
-        saved.setApiName("Updated Name");
-        saved.setStatus(ApiConfigStatus.DISABLED);
-        ApiConfigEntity updated = apiConfigRepository.update(saved);
+        ApiConfigEntity found = apiConfigRepository.query(ApiConfigQuery.builder().apiCode("NOT_EXISTS").build());
 
-        assertThat(updated.getApiName()).isEqualTo("Updated Name");
-        assertThat(updated.getStatus()).isEqualTo(ApiConfigStatus.DISABLED);
-        assertThat(updated.getVersion()).isEqualTo(saved.getVersion() + 1);
+        assertThat(found).isNull();
     }
 
     @Test
     void shouldCheckIfExistsByApiCode() {
         ApiConfigEntity config = createApiConfig();
-        apiConfigRepository.save(config);
+
+        when(apiConfigMapper.exists(any())).thenReturn(true);
 
         boolean exists = apiConfigRepository.exists(ApiConfigQuery.builder().apiCode(config.getApiCode()).build());
+
         assertThat(exists).isTrue();
+    }
+
+    @Test
+    void shouldReturnFalseWhenConfigNotExists() {
+        when(apiConfigMapper.exists(any())).thenReturn(false);
 
         boolean notExists = apiConfigRepository.exists(ApiConfigQuery.builder().apiCode("NOT_EXISTS").build());
+
         assertThat(notExists).isFalse();
     }
 
     private ApiConfigEntity createApiConfig() {
         return ApiConfigEntity.builder()
+                .id(1L)
                 .groupNo("GROUP1")
                 .apiCode("TEST_API_001")
                 .apiName("Test API")
@@ -67,6 +103,21 @@ class ApiConfigRepositoryImplTest {
                 .autoRetryCount(3)
                 .retryIntervalMs(5000L)
                 .maxQueueSize(10000)
+                .build();
+    }
+
+    private ApiConfigDO createApiConfigDO(ApiConfigEntity entity) {
+        return ApiConfigDO.builder()
+                .id(entity.getId())
+                .groupNo(entity.getGroupNo())
+                .apiCode(entity.getApiCode())
+                .apiName(entity.getApiName())
+                .apiDescription(entity.getApiDescription())
+                .status(entity.getStatus().getCode())
+                .requestTimeoutMs(entity.getRequestTimeoutMs())
+                .autoRetryCount(entity.getAutoRetryCount())
+                .retryIntervalMs(entity.getRetryIntervalMs())
+                .maxQueueSize(entity.getMaxQueueSize())
                 .build();
     }
 

@@ -5,10 +5,10 @@ import lombok.Getter;
 @Getter
 public enum TaskStatus {
 
-    PENDING("PENDING", "待执行"),
+    PENDING("PENDING", "待处理"),
     RUNNING("RUNNING", "执行中"),
-    SUCCESS("SUCCESS", "执行成功"),
-    FAILED("FAILED", "执行失败"),
+    SUCCESS("SUCCESS", "成功"),
+    FAILED("FAILED", "失败"),
     CANCELED("CANCELED", "已取消");
 
     private final String code;

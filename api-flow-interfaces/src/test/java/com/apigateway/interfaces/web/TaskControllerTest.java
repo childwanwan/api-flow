@@ -1,47 +1,51 @@
 package com.apigateway.interfaces.web;
 
-import com.apigateway.application.service.TaskApplicationService;
+import com.apigateway.application.task.TaskApplicationService;
+import com.apigateway.application.task.command.TaskCancelCommand;
+import com.apigateway.application.task.command.TaskRetryCommand;
+import com.apigateway.application.task.command.TaskSubmitCommand;
+import com.apigateway.common.result.Result;
 import com.apigateway.domain.task.enums.ActionType;
 import com.apigateway.domain.task.enums.TaskStatus;
-import com.apigateway.domain.task.model.ExecInfo;
-import com.apigateway.domain.task.model.RequestContext;
 import com.apigateway.domain.task.model.TaskEntity;
-import com.apigateway.interfaces.web.dto.TaskCancelRequest;
-import com.apigateway.interfaces.web.dto.TaskRetryRequest;
-import com.apigateway.interfaces.web.dto.TaskSubmitRequest;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.apigateway.interfaces.task.TaskController;
+import com.apigateway.interfaces.task.dto.TaskCancelRequest;
+import com.apigateway.interfaces.task.dto.TaskRetryRequest;
+import com.apigateway.interfaces.task.dto.TaskSubmitRequest;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.http.MediaType;
-import org.springframework.test.web.servlet.MockMvc;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
 
-import java.util.Optional;
+import java.util.Map;
 
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.when;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.mockito.Mockito.*;
 
-@WebMvcTest(TaskController.class)
-class TaskControllerTest {
+public class TaskControllerTest {
 
-    @Autowired
-    private MockMvc mockMvc;
-
-    @Autowired
-    private ObjectMapper objectMapper;
-
-    @MockBean
+    @Mock
     private TaskApplicationService taskApplicationService;
 
+    private TaskController taskController;
+
+    @BeforeEach
+    void setUp() {
+        MockitoAnnotations.openMocks(this);
+        taskController = new TaskController(taskApplicationService);
+    }
+
     @Test
-    void shouldSubmitTask() throws Exception {
-        TaskSubmitRequest request = new TaskSubmitRequest();
-        request.setTaskNo("TASK20260503001");
-        request.setApiCode("TEST_API");
-        request.setActionType(ActionType.SYNC);
+    void shouldSubmitTask() {
+        TaskSubmitRequest request = TaskSubmitRequest.builder()
+                .apiCode("TEST_API")
+                .source("TEST_SOURCE")
+                .groupNo("GROUP_001")
+                .actionType(ActionType.SYNC.getCode())
+                .priority(1)
+                .params(Map.of("key", "value"))
+                .build();
 
         TaskEntity entity = TaskEntity.builder()
                 .id(1L)
@@ -50,17 +54,17 @@ class TaskControllerTest {
                 .status(TaskStatus.PENDING)
                 .build();
 
-        when(taskApplicationService.submitTask(any(TaskEntity.class))).thenReturn(entity);
+        when(taskApplicationService.submitTask(any(TaskSubmitCommand.class))).thenReturn(entity);
 
-        mockMvc.perform(post("/api/v1/tasks")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true));
+        Result<TaskEntity> result = taskController.submitTask(request);
+
+        assertTrue(result.isSuccess());
+        assertEquals("TASK20260503001", result.getData().getTaskNo());
+        verify(taskApplicationService).submitTask(any(TaskSubmitCommand.class));
     }
 
     @Test
-    void shouldGetTaskByTaskNo() throws Exception {
+    void shouldGetTask() {
         TaskEntity entity = TaskEntity.builder()
                 .id(1L)
                 .taskNo("TASK20260503001")
@@ -68,18 +72,22 @@ class TaskControllerTest {
                 .status(TaskStatus.PENDING)
                 .build();
 
-        when(taskApplicationService.getTaskByTaskNo("TASK20260503001")).thenReturn(Optional.of(entity));
+        when(taskApplicationService.getTask("TASK20260503001")).thenReturn(entity);
 
-        mockMvc.perform(get("/api/v1/tasks/task-no/TASK20260503001"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true));
+        Result<TaskEntity> result = taskController.getTask("TASK20260503001");
+
+        assertTrue(result.isSuccess());
+        assertEquals("TASK20260503001", result.getData().getTaskNo());
+        verify(taskApplicationService).getTask("TASK20260503001");
     }
 
     @Test
-    void shouldCancelTask() throws Exception {
-        TaskCancelRequest request = new TaskCancelRequest();
-        request.setCancelReason("User canceled");
-        request.setCancelOperator("admin");
+    void shouldCancelTask() {
+        TaskCancelRequest request = TaskCancelRequest.builder()
+                .taskNo("TASK20260503001")
+                .cancelReason("User canceled")
+                .canceledBy("admin")
+                .build();
 
         TaskEntity entity = TaskEntity.builder()
                 .id(1L)
@@ -87,19 +95,21 @@ class TaskControllerTest {
                 .status(TaskStatus.CANCELED)
                 .build();
 
-        when(taskApplicationService.cancelTask(any(String.class), any(String.class), any(String.class))).thenReturn(entity);
+        when(taskApplicationService.cancelTask(any(TaskCancelCommand.class))).thenReturn(entity);
 
-        mockMvc.perform(post("/api/v1/tasks/TASK20260503001/cancel")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true));
+        Result<TaskEntity> result = taskController.cancelTask(request);
+
+        assertTrue(result.isSuccess());
+        assertEquals(TaskStatus.CANCELED, result.getData().getStatus());
+        verify(taskApplicationService).cancelTask(any(TaskCancelCommand.class));
     }
 
     @Test
-    void shouldRetryTask() throws Exception {
-        TaskRetryRequest request = new TaskRetryRequest();
-        request.setRetryOperator("admin");
+    void shouldRetryTask() {
+        TaskRetryRequest request = TaskRetryRequest.builder()
+                .taskNo("TASK20260503001")
+                .retryOperator("admin")
+                .build();
 
         TaskEntity entity = TaskEntity.builder()
                 .id(1L)
@@ -107,13 +117,13 @@ class TaskControllerTest {
                 .status(TaskStatus.PENDING)
                 .build();
 
-        when(taskApplicationService.retryTask(any(String.class))).thenReturn(entity);
+        when(taskApplicationService.retryTask(any(TaskRetryCommand.class))).thenReturn(entity);
 
-        mockMvc.perform(post("/api/v1/tasks/TASK20260503001/retry")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true));
+        Result<TaskEntity> result = taskController.retryTask(request);
+
+        assertTrue(result.isSuccess());
+        assertEquals(TaskStatus.PENDING, result.getData().getStatus());
+        verify(taskApplicationService).retryTask(any(TaskRetryCommand.class));
     }
 
 }
