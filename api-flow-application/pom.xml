@@ -4,23 +4,27 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <parent>
-        <groupId>com.apigateway</groupId>
+        <groupId>com.flow</groupId>
         <artifactId>api-flow</artifactId>
         <version>1.0.0-SNAPSHOT</version>
     </parent>
 
     <artifactId>api-flow-application</artifactId>
     <name>api-flow-application</name>
-    <description>应用层 - 业务流程编排</description>
+    <description>应用�?- 业务流程编排</description>
 
     <dependencies>
         <dependency>
-            <groupId>com.apigateway</groupId>
+            <groupId>com.flow</groupId>
             <artifactId>api-flow-domain</artifactId>
         </dependency>
         <dependency>
-            <groupId>com.apigateway</groupId>
+            <groupId>com.flow</groupId>
             <artifactId>api-flow-infrastructure</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.flow</groupId>
+            <artifactId>api-flow-api-repository</artifactId>
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -29,6 +33,10 @@
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.mapstruct</groupId>
+            <artifactId>mapstruct</artifactId>
         </dependency>
         <dependency>
             <groupId>org.junit.jupiter</groupId>

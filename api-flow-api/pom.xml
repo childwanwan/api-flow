@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>com.flow</groupId>
+        <artifactId>api-flow</artifactId>
+        <version>1.0.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>api-flow-api</artifactId>
+    <name>api-flow-api</name>
+    <description>API模块 - 基础设施接口定义层（仓储、缓存、消息队列等）</description>
+    <packaging>pom</packaging>
+
+    <modules>
+        <module>api-flow-api-repository</module>
+        <module>api-flow-api-cache</module>
+        <module>api-flow-api-mq</module>
+    </modules>
+
+</project>

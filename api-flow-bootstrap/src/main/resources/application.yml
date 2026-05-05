@@ -11,10 +11,17 @@ spring:
       host: localhost
       port: 6379
       database: 0
+  mvc:
+    static-path-pattern: /static/**
+  freemarker:
+    templateLoaderPath: classpath:/templates/
+    suffix: .ftl
+    charset: UTF-8
+    request-context-attribute: request
 
 mybatis-plus:
   mapper-locations: classpath*:/mapper/**/*.xml
-  type-aliases-package: com.apigateway.infrastructure.persistence.mybatis.entity
+  type-aliases-package: com.flow.infrastructure.persistence.mybatis.entity
   configuration:
     map-underscore-to-camel-case: true
     log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
@@ -22,9 +29,9 @@ mybatis-plus:
 server:
   port: 8080
   servlet:
-    context-path: /
+    context-path: /api-flow
 
 logging:
   level:
     root: INFO
-    com.apigateway: DEBUG
+    com.flow: DEBUG
