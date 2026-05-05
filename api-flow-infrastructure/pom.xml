@@ -4,23 +4,27 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <parent>
-        <groupId>com.flow</groupId>
+        <groupId>com.apiflow</groupId>
         <artifactId>api-flow</artifactId>
         <version>1.0.0-SNAPSHOT</version>
     </parent>
 
     <artifactId>api-flow-infrastructure</artifactId>
     <name>api-flow-infrastructure</name>
-    <description>基础设施�?- 数据库、Redis、消息队列等实现</description>
+    <description>基础设施层 - 数据库、Redis、消息队列等实现</description>
 
     <dependencies>
         <dependency>
-            <groupId>com.flow</groupId>
+            <groupId>com.apiflow</groupId>
             <artifactId>api-flow-domain</artifactId>
         </dependency>
         <dependency>
-            <groupId>com.flow</groupId>
+            <groupId>com.apiflow</groupId>
             <artifactId>api-flow-api-repository</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.apiflow</groupId>
+            <artifactId>api-flow-api-cache</artifactId>
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>

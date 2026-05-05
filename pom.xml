@@ -11,7 +11,7 @@
         <relativePath/>
     </parent>
 
-    <groupId>com.flow</groupId>
+    <groupId>com.apiflow</groupId>
     <artifactId>api-flow</artifactId>
     <version>1.0.0-SNAPSHOT</version>
     <name>API Gateway Middle Platform</name>
@@ -45,42 +45,47 @@
     <dependencyManagement>
         <dependencies>
             <dependency>
-                <groupId>com.flow</groupId>
+                <groupId>com.apiflow</groupId>
                 <artifactId>api-flow-common</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
-                <groupId>com.flow</groupId>
+                <groupId>com.apiflow</groupId>
                 <artifactId>api-flow-api</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
-                <groupId>com.flow</groupId>
-                <artifactId>api-flow-api-dto</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>com.flow</groupId>
+                <groupId>com.apiflow</groupId>
                 <artifactId>api-flow-api-repository</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
-                <groupId>com.flow</groupId>
+                <groupId>com.apiflow</groupId>
+                <artifactId>api-flow-api-cache</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.apiflow</groupId>
+                <artifactId>api-flow-api-mq</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.apiflow</groupId>
                 <artifactId>api-flow-domain</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
-                <groupId>com.flow</groupId>
+                <groupId>com.apiflow</groupId>
                 <artifactId>api-flow-infrastructure</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
-                <groupId>com.flow</groupId>
+                <groupId>com.apiflow</groupId>
                 <artifactId>api-flow-application</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
-                <groupId>com.flow</groupId>
+                <groupId>com.apiflow</groupId>
                 <artifactId>api-flow-interfaces</artifactId>
                 <version>${project.version}</version>
             </dependency>

@@ -21,7 +21,7 @@ spring:
 
 mybatis-plus:
   mapper-locations: classpath*:/mapper/**/*.xml
-  type-aliases-package: com.flow.infrastructure.persistence.mybatis.entity
+  type-aliases-package: com.apiflow.infrastructure.persistence.mybatis.entity
   configuration:
     map-underscore-to-camel-case: true
     log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
@@ -34,4 +34,4 @@ server:
 logging:
   level:
     root: INFO
-    com.flow: DEBUG
+    com.apiflow: DEBUG

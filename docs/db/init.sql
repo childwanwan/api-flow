@@ -85,3 +85,103 @@ CREATE TABLE api_task_log (
     PRIMARY KEY (id),
     INDEX idx_task_log_task_no (task_no)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='任务日志表';
+
+-- API分组表
+DROP TABLE IF EXISTS api_group;
+CREATE TABLE api_group (
+    id BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+    group_no VARCHAR(64) NOT NULL COMMENT '分组编号',
+    group_name VARCHAR(128) NOT NULL COMMENT '分组名称',
+    group_description VARCHAR(512) COMMENT '分组描述',
+    create_time_ms BIGINT NOT NULL COMMENT '创建时间戳（毫秒）',
+    update_time_ms BIGINT NOT NULL COMMENT '更新时间戳（毫秒）',
+    create_operator VARCHAR(64) COMMENT '创建人',
+    update_operator VARCHAR(64) COMMENT '更新人',
+    deleted TINYINT NOT NULL DEFAULT 0 COMMENT '逻辑删除：0-未删除，1-已删除',
+    version INT NOT NULL DEFAULT 0 COMMENT '版本号',
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_api_group_no_deleted (group_no, deleted)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='API分组表';
+
+-- 配置变更日志表
+DROP TABLE IF EXISTS api_config_log;
+CREATE TABLE api_config_log (
+    id BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+    api_code VARCHAR(64) NOT NULL COMMENT 'API编码',
+    change_type VARCHAR(64) NOT NULL COMMENT '变更类型：CREATE/UPDATE/ENABLE/DISABLE/DELETE',
+    before_config JSON COMMENT '变更前配置JSON',
+    after_config JSON COMMENT '变更后配置JSON',
+    operator VARCHAR(64) COMMENT '操作人',
+    create_time_ms BIGINT NOT NULL COMMENT '创建时间戳（毫秒）',
+    PRIMARY KEY (id),
+    INDEX idx_config_log_api_code (api_code),
+    INDEX idx_config_log_create_time (create_time_ms)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='配置变更日志表';
+
+-- 操作日志表
+DROP TABLE IF EXISTS sys_operation_log;
+CREATE TABLE sys_operation_log (
+    id BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+    username VARCHAR(64) COMMENT '操作用户',
+    operation VARCHAR(128) COMMENT '操作类型',
+    module VARCHAR(64) COMMENT '操作模块',
+    detail TEXT COMMENT '操作详情',
+    ip VARCHAR(64) COMMENT 'IP地址',
+    create_time_ms BIGINT NOT NULL COMMENT '创建时间戳（毫秒）',
+    PRIMARY KEY (id),
+    INDEX idx_operation_log_username (username),
+    INDEX idx_operation_log_create_time (create_time_ms)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='操作日志表';
+
+-- 插件配置表
+DROP TABLE IF EXISTS plugin_config;
+CREATE TABLE plugin_config (
+    id BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+    plugin_code VARCHAR(64) NOT NULL COMMENT '插件编码',
+    plugin_name VARCHAR(128) NOT NULL COMMENT '插件名称',
+    plugin_class VARCHAR(256) NOT NULL COMMENT '插件实现类',
+    description VARCHAR(512) COMMENT '插件描述',
+    config JSON COMMENT '插件自定义配置JSON',
+    enabled TINYINT NOT NULL DEFAULT 1 COMMENT '是否启用：0-禁用，1-启用',
+    order_num INT NOT NULL DEFAULT 0 COMMENT '排序号',
+    create_time_ms BIGINT NOT NULL COMMENT '创建时间戳（毫秒）',
+    update_time_ms BIGINT NOT NULL COMMENT '更新时间戳（毫秒）',
+    deleted TINYINT NOT NULL DEFAULT 0 COMMENT '逻辑删除：0-未删除，1-已删除',
+    version INT NOT NULL DEFAULT 0 COMMENT '版本号',
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_plugin_config_code_deleted (plugin_code, deleted)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='插件配置表';
+
+-- 用户表
+DROP TABLE IF EXISTS sys_user;
+CREATE TABLE sys_user (
+    id BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+    username VARCHAR(64) NOT NULL COMMENT '用户名',
+    password VARCHAR(128) NOT NULL COMMENT '密码（MD5加密）',
+    role VARCHAR(32) NOT NULL DEFAULT 'USER' COMMENT '角色：ADMIN-管理员，USER-普通用户',
+    status VARCHAR(32) NOT NULL DEFAULT 'ENABLED' COMMENT '状态：ENABLED-启用，DISABLED-禁用',
+    create_time_ms BIGINT NOT NULL COMMENT '创建时间戳（毫秒）',
+    update_time_ms BIGINT NOT NULL COMMENT '更新时间戳（毫秒）',
+    create_operator VARCHAR(64) COMMENT '创建人',
+    last_login_time_ms BIGINT COMMENT '最后登录时间戳（毫秒）',
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_sys_user_username (username)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='用户表';
+
+-- 初始管理员用户（密码: admin123 的MD5）
+INSERT INTO sys_user (username, password, role, status, create_time_ms, update_time_ms, create_operator)
+VALUES ('admin', '0192023a7bbd73250516f069df18b500', 'ADMIN', 'ENABLED', 1746153600000, 1746153600000, 'system');
+
+-- 初始API分组
+INSERT INTO api_group (group_no, group_name, group_description, create_time_ms, update_time_ms, create_operator)
+VALUES ('DEFAULT', '默认分组', '系统默认分组', 1746153600000, 1746153600000, 'system');
+
+-- 初始插件配置
+INSERT INTO plugin_config (plugin_code, plugin_name, plugin_class, description, enabled, order_num, create_time_ms, update_time_ms)
+VALUES ('PARAM_VALIDATOR', '参数校验插件', 'com.apiflow.domain.plugin.builtin.ParamValidatorPlugin', '校验请求参数是否合法', 1, 1, 1746153600000, 1746153600000);
+
+INSERT INTO plugin_config (plugin_code, plugin_name, plugin_class, description, enabled, order_num, create_time_ms, update_time_ms)
+VALUES ('RATE_LIMIT_CHECK', '限流检查插件', 'com.apiflow.domain.plugin.builtin.RateLimitCheckPlugin', '检查是否触发限流规则', 1, 2, 1746153600000, 1746153600000);
+
+INSERT INTO plugin_config (plugin_code, plugin_name, plugin_class, description, enabled, order_num, create_time_ms, update_time_ms)
+VALUES ('BUSINESS_EXECUTOR', '业务执行插件', 'com.apiflow.domain.plugin.builtin.BusinessExecutorPlugin', '执行核心业务逻辑', 1, 3, 1746153600000, 1746153600000);
