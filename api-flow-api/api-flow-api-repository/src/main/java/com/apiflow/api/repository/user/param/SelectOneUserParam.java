@@ -1,5 +1,6 @@
 package com.apiflow.api.repository.user.param;
 
+import com.apiflow.common.repository.ConditionNode;
 import com.apiflow.common.repository.FieldCondition;
 import com.apiflow.common.repository.QueryCondition;
 import lombok.AllArgsConstructor;
@@ -17,9 +18,11 @@ public class SelectOneUserParam {
     private FieldCondition<String> username;
     private List<UserField> selectFields;
     private List<QueryCondition<UserField>> conditions;
+    private ConditionNode condition;
 
     public boolean isEmpty() {
         return !(username != null && username.hasAnyCondition())
-                && (conditions == null || conditions.isEmpty());
+                && (conditions == null || conditions.isEmpty())
+                && (condition == null || condition.isEmpty());
     }
 }

@@ -32,13 +32,9 @@
                         </span>
                         <input type="password" name="password" class="login-input" placeholder="请输入密码" autocomplete="off" required>
                     </div>
-                    <div class="login-remember">
-                        <label>
-                            <input type="checkbox" name="remember-me">
-                            <span>记住密码</span>
-                        </label>
-                    </div>
-                    <div class="login-error" id="errorMsg">
+                    <div class="login-error" id="errorMsg" style="display:none;">
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
+                        <span id="errorText"></span>
                     </div>
                     <button type="submit" class="login-button">登 录</button>
                 </form>
@@ -250,11 +246,24 @@
                 if (data.success) {
                     window.location.href = '${request.contextPath}/index';
                 } else {
-                    document.getElementById('errorMsg').innerHTML = '<span class="error-text">' + data.message + '</span>';
+                    var errMsg = (data.error && data.error.message) ? data.error.message : '用户名或密码错误';
+                    var errBox = document.getElementById('errorMsg');
+                    var errText = document.getElementById('errorText');
+                    errText.textContent = errMsg;
+                    errBox.style.display = 'flex';
+                    errBox.style.animation = 'none';
+                    errBox.offsetHeight;
+                    errBox.style.animation = 'shake 0.4s ease';
                 }
             })
             .catch(error => {
-                document.getElementById('errorMsg').innerHTML = '<span class="error-text">请求失败，请重试</span>';
+                var errBox = document.getElementById('errorMsg');
+                var errText = document.getElementById('errorText');
+                errText.textContent = '网络请求失败，请检查网络连接';
+                errBox.style.display = 'flex';
+                errBox.style.animation = 'none';
+                errBox.offsetHeight;
+                errBox.style.animation = 'shake 0.4s ease';
             });
         });
     </script>

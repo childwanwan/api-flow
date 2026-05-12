@@ -1,5 +1,6 @@
 package com.apiflow.api.repository.group.param;
 
+import com.apiflow.common.repository.ConditionNode;
 import com.apiflow.common.repository.FieldCondition;
 import com.apiflow.common.repository.QueryCondition;
 import lombok.AllArgsConstructor;
@@ -15,9 +16,12 @@ import java.util.List;
 @AllArgsConstructor
 public class SelectApiGroupParam {
     private FieldCondition<String> groupNo;
+    private FieldCondition<String> groupCode;
     private FieldCondition<String> groupName;
     private Integer limit;
     private Integer offset;
     private List<ApiGroupField> selectFields;
     private List<QueryCondition<ApiGroupField>> conditions;
+    private List<OrderBy> orders;
+    private ConditionNode condition;
 }

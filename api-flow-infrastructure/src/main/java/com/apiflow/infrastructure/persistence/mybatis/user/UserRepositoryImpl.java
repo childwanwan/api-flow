@@ -7,6 +7,7 @@ import com.apiflow.api.repository.user.param.InsertUserParam;
 import com.apiflow.api.repository.user.param.SelectOneUserParam;
 import com.apiflow.api.repository.user.param.SelectUserParam;
 import com.apiflow.api.repository.user.param.UpdateUserParam;
+import com.apiflow.api.repository.user.param.UserField;
 import com.apiflow.infrastructure.persistence.mybatis.user.converter.UserConverter;
 import com.apiflow.infrastructure.persistence.mybatis.user.entity.UserPO;
 import com.apiflow.infrastructure.persistence.mybatis.util.QueryConditionHelper;
@@ -19,6 +20,8 @@ import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.stream.Collectors;
+
+import static com.apiflow.infrastructure.persistence.mybatis.util.QueryConditionHelper.createFieldResolver;
 
 @Repository
 @RequiredArgsConstructor
@@ -37,6 +40,7 @@ public class UserRepositoryImpl implements UserRepository {
                 QueryConditionHelper.applyFieldCondition(wrapper, "username", param.getUsername());
             }
             QueryConditionHelper.applyConditions(wrapper, param.getConditions());
+            QueryConditionHelper.applyConditionNode(wrapper, param.getCondition(), createFieldResolver(UserField.values()));
             UserPO userPO = userMapper.selectOne(wrapper);
             return UserConverter.INSTANCE.userPOToUserIDTO(userPO);
         }
@@ -45,17 +49,19 @@ public class UserRepositoryImpl implements UserRepository {
             QueryConditionHelper.applyFieldCondition(wrapper, UserPO::getUsername, param.getUsername());
         }
         QueryConditionHelper.applyConditions(wrapper, param.getConditions());
+        QueryConditionHelper.applyConditionNode(wrapper, param.getCondition(), createFieldResolver(UserField.values()));
         UserPO userPO = userMapper.selectOne(wrapper);
         return UserConverter.INSTANCE.userPOToUserIDTO(userPO);
     }
 
     @Override
     public List<UserIDTO> selectList(SelectUserParam param) {
-        if (param.getSelectFields() != null && !param.getSelectFields().isEmpty()) {
+        if (param != null && param.getSelectFields() != null && !param.getSelectFields().isEmpty()) {
             QueryWrapper<UserPO> wrapper = new QueryWrapper<>();
             QueryConditionHelper.applySelectFields(wrapper, param.getSelectFields());
             applyConditions(wrapper, param);
             QueryConditionHelper.applyConditions(wrapper, param.getConditions());
+            QueryConditionHelper.applyConditionNode(wrapper, param.getCondition(), createFieldResolver(UserField.values()));
             wrapper.orderByDesc("create_time_ms");
             List<UserPO> list = userMapper.selectList(wrapper);
             return list.stream()
@@ -64,7 +70,10 @@ public class UserRepositoryImpl implements UserRepository {
         }
         LambdaQueryWrapper<UserPO> wrapper = new LambdaQueryWrapper<>();
         applyLambdaConditions(wrapper, param);
-        QueryConditionHelper.applyConditions(wrapper, param.getConditions());
+        if (param != null) {
+            QueryConditionHelper.applyConditions(wrapper, param.getConditions());
+            QueryConditionHelper.applyConditionNode(wrapper, param.getCondition(), createFieldResolver(UserField.values()));
+        }
         wrapper.orderByDesc(UserPO::getCreateTimeMs);
         List<UserPO> list = userMapper.selectList(wrapper);
         return list.stream()
@@ -124,6 +133,10 @@ public class UserRepositoryImpl implements UserRepository {
     public long count(SelectUserParam param) {
         LambdaQueryWrapper<UserPO> wrapper = new LambdaQueryWrapper<>();
         applyLambdaConditions(wrapper, param);
+        if (param != null) {
+            QueryConditionHelper.applyConditions(wrapper, param.getConditions());
+            QueryConditionHelper.applyConditionNode(wrapper, param.getCondition(), createFieldResolver(UserField.values()));
+        }
         return userMapper.selectCount(wrapper);
     }
 

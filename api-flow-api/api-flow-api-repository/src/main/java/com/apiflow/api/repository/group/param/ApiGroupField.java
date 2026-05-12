@@ -9,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 public enum ApiGroupField implements FieldMetadata {
     ID("id", "id", null),
     GROUP_NO("groupNo", "group_no", null),
+    GROUP_CODE("groupCode", "group_code", null),
     GROUP_NAME("groupName", "group_name", null),
     GROUP_DESCRIPTION("groupDescription", "group_description", null),
     CREATE_TIME_MS("createTimeMs", "create_time_ms", null),

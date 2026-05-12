@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>用户管理</title>
     <link rel="stylesheet" href="${request.contextPath}/static/css/common.css">
+    <script src="${request.contextPath}/static/js/pagination.js"></script>
 </head>
 <body class="iframe-body">
 <div class="iframe-content">
@@ -27,29 +28,9 @@
                 <th class="checkbox-col"><input type="checkbox" onclick="toggleAll(this)"></th>
                 <th>用户名</th><th>角色</th><th>状态</th><th>创建时间</th><th>最后登录</th><th>操作</th>
             </tr></thead>
-            <tbody id="userTableBody">
-            <#if userList??>
-                <#list userList as user>
-                <tr>
-                    <td class="checkbox-col"><input type="checkbox" class="row-checkbox"></td>
-                    <td>${user.username}</td>
-                    <td><span class="status-tag <#if user.role=='ADMIN'>status-running<#else>status-success</#if>"><#if user.role=='ADMIN'>管理员<#else>普通用户</#if></span></td>
-                    <td><span class="status-tag <#if user.status=='ENABLED'>status-enabled<#else>status-disabled</#if>"><span class="status-dot"></span><#if user.status=='ENABLED'>启用<#else>禁用</#if></span></td>
-                    <td>${formatTime(user.createTimeMs)}</td>
-                    <td>${user.lastLoginTimeMs?has_content?then(formatTime(user.lastLoginTimeMs), '-')}</td>
-                    <td class="action-col">
-                        <button class="btn-text" onclick="showEditDialog(${user.id})">编辑</button>
-                        <span class="action-divider">|</span>
-                        <button class="btn-text btn-danger-text" onclick="deleteUser(${user.id})">删除</button>
-                    </td>
-                </tr>
-                </#list>
-            <#else>
-                <tr><td colspan="7" class="empty-row">暂无数据</td></tr>
-            </#if>
-            </tbody>
+            <tbody id="userTableBody"><tr><td colspan="7" class="empty-row">暂无数据</td></tr></tbody>
         </table>
-        <div style="padding:0 16px;"><div class="pagination"><span class="pagination-total">共 ${userList?size!0} 条</span><div class="pagination-controls"></div></div></div>
+        <div style="padding:0 16px;"><div class="pagination-wrap" id="userPagination"></div></div>
     </div>
 </div>
 
@@ -71,8 +52,44 @@
 <script>
 var contextPath = '${request.contextPath}';
 if(window.top!==window.self){}else{window.top.location.href=contextPath+'/index?page=user';}
+var BASE = contextPath + '/user/api';
+
+var userPagination = new Pagination({el:'userPagination',total:0,mode:'simple',showSizeChanger:false});
 function toggleAll(cb) { document.querySelectorAll('.row-checkbox').forEach(function(c){c.checked=cb.checked;}); }
 function formatTime(ms) { if(!ms) return '-'; var d=new Date(ms); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')+':'+String(d.getSeconds()).padStart(2,'0'); }
+
+function loadUsers() {
+    var username=document.getElementById('searchUsername').value;
+    var role=document.getElementById('searchRole').value;
+    var status=document.getElementById('searchStatus').value;
+    var params=new URLSearchParams();
+    if(username) params.append('username',username);
+    if(role) params.append('role',role);
+    if(status) params.append('status',status);
+    fetch(BASE+'/list?'+params.toString()).then(function(r){return r.json();}).then(function(data){
+        if(data.success&&data.data) renderTable(data.data.list||[]);
+    });
+}
+
+function renderTable(list) {
+    var tbody=document.getElementById('userTableBody');
+    if(!list||!list.length){tbody.innerHTML='<tr><td colspan="7" class="empty-row">暂无数据</td></tr>';userPagination.update(0);return;}
+    tbody.innerHTML=list.map(function(u){
+        return '<tr>'+
+            '<td class="checkbox-col"><input type="checkbox" class="row-checkbox"></td>'+
+            '<td>'+u.username+'</td>'+
+            '<td><span class="status-tag '+(u.role==='ADMIN'?'status-running':'status-success')+'">'+(u.role==='ADMIN'?'管理员':'普通用户')+'</span></td>'+
+            '<td><span class="status-tag '+(u.status==='ENABLED'?'status-enabled':'status-disabled')+'"><span class="status-dot"></span>'+(u.status==='ENABLED'?'启用':'禁用')+'</span></td>'+
+            '<td>'+formatTime(u.createTimeMs)+'</td>'+
+            '<td>'+(u.lastLoginTimeMs?formatTime(u.lastLoginTimeMs):'-')+'</td>'+
+            '<td class="action-col"><button class="btn-text" onclick="showEditDialog('+u.id+')">编辑</button><span class="action-divider">|</span><button class="btn-text btn-danger-text" onclick="deleteUser('+u.id+')">删除</button></td>'+
+            '</tr>';
+    }).join('');
+    userPagination.update(list.length);
+}
+
+function searchUsers() { loadUsers(); }
+function resetSearch() { document.getElementById('searchUsername').value=''; document.getElementById('searchRole').value=''; document.getElementById('searchStatus').value=''; loadUsers(); }
 
 function showAddDialog() {
     document.getElementById('modalTitle').textContent='新建用户';
@@ -80,16 +97,18 @@ function showAddDialog() {
     document.getElementById('formUsername').value='';
     document.getElementById('formPassword').value='';
     document.getElementById('formPasswordConfirm').value='';
+    document.getElementById('formUsername').readOnly=false;
     document.querySelector('input[name=formRole][value=USER]').checked=true;
     document.querySelector('input[name=formUserStatus][value=ENABLED]').checked=true;
     document.getElementById('userModal').style.display='flex';
 }
 function showEditDialog(id) {
-    fetch(contextPath+'/user/api/'+id).then(function(r){return r.json();}).then(function(data){
-        if(data.success){
+    fetch(BASE+'/'+id).then(function(r){return r.json();}).then(function(data){
+        if(data.success&&data.data){
             document.getElementById('modalTitle').textContent='编辑用户';
             document.getElementById('userId').value=data.data.id;
             document.getElementById('formUsername').value=data.data.username;
+            document.getElementById('formUsername').readOnly=true;
             document.getElementById('formPassword').value='';
             document.getElementById('formPasswordConfirm').value='';
             var roleRadio=document.querySelector('input[name=formRole][value='+data.data.role+']');
@@ -110,19 +129,18 @@ function saveUser() {
     if(password&&password!==document.getElementById('formPasswordConfirm').value){showToast('两次密码输入不一致','warning');return;}
     var body={username:username,role:document.querySelector('input[name=formRole]:checked').value,status:document.querySelector('input[name=formUserStatus]:checked').value};
     if(password) body.password=password;
-    var url=id?contextPath+'/user/api/'+id:contextPath+'/user/api/create';
+    var url=id?BASE+'/'+id:BASE+'/create';
     var method=id?'PUT':'POST';
     fetch(url,{method:method,headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}).then(function(r){return r.json();}).then(function(data){
-        if(data.success){showToast('保存成功','success');hideModal();location.reload();}
-        else showToast(data.message||'操作失败','error');
+        if(data.success){showToast('保存成功','success');hideModal();loadUsers();}
+        else showToast((data.error&&data.error.message)||'操作失败','error');
     });
 }
-function deleteUser(id) { if(!confirm('确定要删除该用户吗？'))return; fetch(contextPath+'/user/api/'+id,{method:'DELETE'}).then(function(r){return r.json();}).then(function(data){if(data.success){showToast('删除成功','success');location.reload();}else showToast(data.message||'删除失败','error');}); }
-function searchUsers() { var username=document.getElementById('searchUsername').value; var role=document.getElementById('searchRole').value; var status=document.getElementById('searchStatus').value; var url=contextPath+'/user/api/list?'+(username?'username='+encodeURIComponent(username):'')+(role?'&role='+role:'')+(status?'&status='+status:''); fetch(url).then(function(r){return r.json();}).then(function(data){if(data.success)renderTable(data.data.list);}); }
-function resetSearch() { document.getElementById('searchUsername').value=''; document.getElementById('searchRole').value=''; document.getElementById('searchStatus').value=''; searchUsers(); }
-function renderTable(list) { var tbody=document.getElementById('userTableBody'); if(!list||!list.length){tbody.innerHTML='<tr><td colspan="7" class="empty-row">暂无数据</td></tr>';return;} tbody.innerHTML=list.map(function(u){ return '<tr><td class="checkbox-col"><input type="checkbox" class="row-checkbox"></td><td>'+u.username+'</td><td><span class="status-tag '+(u.role==='ADMIN'?'status-running':'status-success')+'">'+(u.role==='ADMIN'?'管理员':'普通用户')+'</span></td><td><span class="status-tag '+(u.status==='ENABLED'?'status-enabled':'status-disabled')+'"><span class="status-dot"></span>'+(u.status==='ENABLED'?'启用':'禁用')+'</span></td><td>'+formatTime(u.createTimeMs)+'</td><td>'+(u.lastLoginTimeMs?formatTime(u.lastLoginTimeMs):'-')+'</td><td class="action-col"><button class="btn-text" onclick="showEditDialog('+u.id+')">编辑</button><span class="action-divider">|</span><button class="btn-text btn-danger-text" onclick="deleteUser('+u.id+')">删除</button></td></tr>'; }).join(''); }
+function deleteUser(id) { if(!confirm('确定要删除该用户吗？'))return; fetch(BASE+'/'+id,{method:'DELETE'}).then(function(r){return r.json();}).then(function(data){if(data.success){showToast('删除成功','success');loadUsers();}else showToast((data.error&&data.error.message)||'删除失败','error');}); }
 function showToast(msg,type) { var t=document.createElement('div');t.className='toast toast-'+type;t.textContent=msg;document.body.appendChild(t);setTimeout(function(){t.remove();},3000); }
 document.getElementById('userModal').addEventListener('click',function(e){if(e.target===this)hideModal();});
+
+loadUsers();
 </script>
 </body>
 </html>

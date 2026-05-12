@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>API配置</title>
     <link rel="stylesheet" href="${request.contextPath}/static/css/common.css">
+    <script src="${request.contextPath}/static/js/pagination.js"></script>
 </head>
 <body class="iframe-body">
 <div class="iframe-content">
@@ -49,7 +50,7 @@
                 <th>API编码</th>
                 <th>API名称</th>
                 <th>分组</th>
-                <th>限流值</th>
+                <th>目标URL</th>
                 <th>状态</th>
                 <th>操作</th>
             </tr>
@@ -59,11 +60,7 @@
             </tbody>
         </table>
         <div style="padding:0 16px;">
-            <div class="pagination">
-                <span class="pagination-total" id="paginationTotal">共 0 条</span>
-                <div class="pagination-controls" id="paginationControls"></div>
-                <div class="pagination-size">每页<select id="pageSize" onchange="loadConfigs()"><option value="20" selected>20</option><option value="50">50</option><option value="100">100</option></select>条</div>
-            </div>
+            <div class="pagination-wrap" id="configPagination"></div>
         </div>
     </div>
 </div>
@@ -77,6 +74,7 @@
         <div class="modal-body">
             <div class="form-tabs">
                 <div class="form-tab active" onclick="switchTab(this,'tab-basic')">基本信息</div>
+                <div class="form-tab" onclick="switchTab(this,'tab-curl')">Curl配置</div>
                 <div class="form-tab" onclick="switchTab(this,'tab-rate-limit')">限流配置</div>
                 <div class="form-tab" onclick="switchTab(this,'tab-filter')">过滤规则</div>
                 <div class="form-tab" onclick="switchTab(this,'tab-plugin')">插件配置</div>
@@ -101,6 +99,44 @@
                         <div class="form-group"><label>请求超时(ms)</label><input type="number" id="formRequestTimeoutMs" class="form-control" value="30000"><span class="form-hint">默认30000ms</span></div>
                         <div class="form-group"><label>最大重试次数</label><input type="number" id="formAutoRetryCount" class="form-control" value="64"><span class="form-hint">默认64次</span></div>
                         <div class="form-group"><label>重试间隔(ms)</label><input type="number" id="formRetryIntervalMs" class="form-control" value="5000"><span class="form-hint">默认5000ms，指数退避</span></div>
+                    </div>
+                </div>
+            </div>
+            <div id="tab-curl" class="tab-panel" style="display:none;">
+                <div class="form-section">
+                    <div class="form-section-title">Curl / HTTP请求配置</div>
+                    <p style="color:#909399;margin-bottom:12px;">配置业务执行插件(BUSINESS_EXECUTOR)发起的真实HTTP请求。支持模板变量：${r"${params.xxx}"}、${r"${customData.xxx}"}、${r"${taskNo}"}、${r"${apiCode}"}</p>
+                    <div class="form-group"><label>目标URL</label><input type="text" id="formTargetUrl" class="form-control" placeholder="https://api.example.com/orders/${r"${params.orderId}"}"></div>
+                    <div class="form-row">
+                        <div class="form-group"><label>请求方法</label>
+                            <select id="formTargetMethod" class="form-control">
+                                <option value="POST">POST</option>
+                                <option value="GET">GET</option>
+                                <option value="PUT">PUT</option>
+                                <option value="DELETE">DELETE</option>
+                                <option value="PATCH">PATCH</option>
+                            </select>
+                        </div>
+                        <div class="form-group"><label>超时时间(ms)</label><input type="number" id="formTargetTimeoutMs" class="form-control" value="30000" placeholder="默认30000ms"></div>
+                    </div>
+                    <div class="form-section-title" style="margin-top:16px;">请求头</div>
+                    <table class="data-table" id="headerTable">
+                        <thead><tr><th>Header名称</th><th>Header值</th><th style="width:80px;">操作</th></tr></thead>
+                        <tbody id="headerBody"></tbody>
+                    </table>
+                    <button class="btn" style="margin-top:8px;" onclick="addHeaderRow()">+ 添加请求头</button>
+                    <div class="form-section-title" style="margin-top:16px;">请求体模板</div>
+                    <div class="form-group"><label>Body模板 (JSON)</label><textarea id="formTargetBodyTemplate" class="form-control" style="min-height:120px;font-family:monospace;" placeholder='{"orderId":"${r"${params.orderId}"}","taskNo":"${r"${taskNo}"}"}'></textarea></div>
+                </div>
+                <div class="form-section">
+                    <div class="form-section-title">环境配置</div>
+                    <div class="form-row">
+                        <div class="form-group"><label>Region</label><input type="text" id="formRegion" class="form-control" placeholder="如：us-east-1"></div>
+                        <div class="form-group"><label>Seller ID</label><input type="text" id="formSellerId" class="form-control" placeholder="如：A123456789"></div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group"><label>AWS Access Key</label><input type="text" id="formAwsAccessKey" class="form-control" placeholder="AWS访问密钥"></div>
+                        <div class="form-group"><label>环境</label><input type="text" id="formEnvironment" class="form-control" placeholder="如：production / staging"></div>
                     </div>
                 </div>
             </div>
@@ -147,11 +183,11 @@
                     <div id="receiptHttpConfig" style="display:none;">
                         <div class="form-row"><div class="form-group"><label>URL</label><input type="text" class="form-control" placeholder="https://callback.example.com/api"></div><div class="form-group"><label>方法</label><select class="form-control"><option>POST</option><option>GET</option><option>PUT</option></select></div></div>
                         <div class="form-row"><div class="form-group"><label>超时(ms)</label><input type="number" class="form-control" value="5000"></div><div class="form-group"><label>重试次数</label><input type="number" class="form-control" value="64"></div></div>
-                        <div class="form-group"><label>消息体模板</label><textarea class="form-control" placeholder='{"taskNo":"${taskNo}","status":"${status}"}'></textarea></div>
+                        <div class="form-group"><label>消息体模板</label><textarea class="form-control" placeholder='{"taskNo":"${r"${taskNo}"}","status":"${r"${status}"}"}'></textarea></div>
                     </div>
                     <div id="receiptMqConfig" style="display:none;">
-                        <div class="form-row"><div class="form-group"><label>Topic</label><input type="text" class="form-control" placeholder="api-callback-topic"></div><div class="form-group"><label>Key模板</label><input type="text" class="form-control" placeholder="${taskNo}"></div></div>
-                        <div class="form-group"><label>消息体模板</label><textarea class="form-control" placeholder='{"taskNo":"${taskNo}","status":"${status}"}'></textarea></div>
+                        <div class="form-row"><div class="form-group"><label>Topic</label><input type="text" class="form-control" placeholder="api-callback-topic"></div><div class="form-group"><label>Key模板</label><input type="text" class="form-control" placeholder="${r"${taskNo}"}"></div></div>
+                        <div class="form-group"><label>消息体模板</label><textarea class="form-control" placeholder='{"taskNo":"${r"${taskNo}"}","status":"${r"${status}"}"}'></textarea></div>
                     </div>
                 </div>
             </div>
@@ -168,6 +204,8 @@ var contextPath = '${request.contextPath}';
 if(window.top!==window.self){}else{window.top.location.href=contextPath+'/index?page=api-config';}
 var BASE = contextPath + '/api/v1/config';
 var editingApiCode = null;
+
+var configPagination = new Pagination({el:'configPagination',total:0,mode:'simple',showSizeChanger:false});
 
 function toggleAll(cb) { document.querySelectorAll('.row-checkbox').forEach(function(c){c.checked=cb.checked;}); }
 
@@ -211,14 +249,16 @@ function loadConfigs() {
 
 function renderConfigs(configs) {
     var tbody = document.getElementById('configTableBody');
-    if(!configs.length) { tbody.innerHTML='<tr><td colspan="7" class="empty-row">暂无数据</td></tr>'; document.getElementById('paginationTotal').textContent='共 0 条'; return; }
+    if(!configs.length) { tbody.innerHTML='<tr><td colspan="7" class="empty-row">暂无数据</td></tr>'; configPagination.update(0); return; }
     tbody.innerHTML = configs.map(function(c){
+        var ec = c.extraConfig || {};
+        var targetUrlDisplay = ec.targetUrl ? (ec.targetUrl.length > 40 ? ec.targetUrl.substring(0,40)+'...' : ec.targetUrl) : '-';
         return '<tr>'+
             '<td class="checkbox-col"><input type="checkbox" class="row-checkbox"></td>'+
             '<td>'+c.apiCode+'</td>'+
             '<td>'+(c.apiName||'')+'</td>'+
             '<td>'+(c.groupNo||'-')+'</td>'+
-            '<td>'+(c.rateLimitThreshold||'-')+'</td>'+
+            '<td title="'+(ec.targetUrl||'')+'">'+targetUrlDisplay+'</td>'+
             '<td>'+statusTag(c.status||'ENABLED')+'</td>'+
             '<td class="action-col">'+
                 '<button class="btn-text" onclick="editConfig(\''+c.apiCode+'\')">编辑</button>'+
@@ -235,17 +275,69 @@ function renderConfigs(configs) {
                 '</span>'+
             '</td></tr>';
     }).join('');
-    document.getElementById('paginationTotal').textContent = '共 '+configs.length+' 条';
+    configPagination.update(configs.length);
 }
 
 function toggleDropdown(code) {
     var el = document.getElementById('more_'+code);
-    el.classList.toggle('open');
-    setTimeout(function(){ document.addEventListener('click',function close(ev){ if(!el.contains(ev.target)){el.classList.remove('open');document.removeEventListener('click',close);} }); },0);
+    if (!el) return;
+    var isOpen = el.classList.contains('open');
+    document.querySelectorAll('.dropdown.open').forEach(function(d){ d.classList.remove('open'); });
+    if (!isOpen) el.classList.add('open');
 }
+
+document.addEventListener('click', function(e) {
+    var inside = false;
+    document.querySelectorAll('.dropdown.open').forEach(function(d) {
+        if (d.contains(e.target)) inside = true;
+    });
+    if (!inside) {
+        document.querySelectorAll('.dropdown.open').forEach(function(d){ d.classList.remove('open'); });
+    }
+});
 
 function searchConfigs() { loadConfigs(); }
 function resetSearch() { document.getElementById('searchApiCode').value=''; document.getElementById('searchApiName').value=''; document.getElementById('searchGroupNo').value=''; document.getElementById('searchStatus').value=''; loadConfigs(); }
+
+function resetCurlForm() {
+    document.getElementById('formTargetUrl').value = '';
+    document.getElementById('formTargetMethod').value = 'POST';
+    document.getElementById('formTargetTimeoutMs').value = '30000';
+    document.getElementById('formTargetBodyTemplate').value = '';
+    document.getElementById('formRegion').value = '';
+    document.getElementById('formSellerId').value = '';
+    document.getElementById('formAwsAccessKey').value = '';
+    document.getElementById('formEnvironment').value = '';
+    document.getElementById('headerBody').innerHTML = '';
+}
+
+function addHeaderRow(key, value) {
+    var tbody = document.getElementById('headerBody');
+    var k = key || '';
+    var v = value || '';
+    tbody.insertAdjacentHTML('beforeend',
+        '<tr><td><input type="text" class="form-control header-key" value="'+escapeHtml(k)+'" placeholder="如：Authorization"></td>'+
+        '<td><input type="text" class="form-control header-value" value="'+escapeHtml(v)+'" placeholder="如：Bearer ${r"${params.token}"}"></td>'+
+        '<td><button class="btn-text btn-danger-text" onclick="this.closest(\'tr\').remove()">删除</button></td></tr>');
+}
+
+function escapeHtml(str) {
+    if (!str) return '';
+    return str.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function collectHeaders() {
+    var headers = {};
+    var rows = document.querySelectorAll('#headerBody tr');
+    rows.forEach(function(row) {
+        var key = row.querySelector('.header-key');
+        var val = row.querySelector('.header-value');
+        if (key && val && key.value.trim()) {
+            headers[key.value.trim()] = val.value;
+        }
+    });
+    return Object.keys(headers).length > 0 ? headers : null;
+}
 
 function showAddDialog() {
     editingApiCode = null;
@@ -258,6 +350,7 @@ function showAddDialog() {
     document.getElementById('formAutoRetryCount').value = '64';
     document.getElementById('formRetryIntervalMs').value = '5000';
     document.querySelector('input[name=formStatus][value=ENABLED]').checked = true;
+    resetCurlForm();
     document.getElementById('configModal').style.display = 'flex';
 }
 
@@ -277,6 +370,21 @@ function editConfig(apiCode) {
             document.getElementById('formRetryIntervalMs').value = c.retryIntervalMs||5000;
             var radio = document.querySelector('input[name=formStatus][value='+(c.status||'ENABLED')+']');
             if(radio) radio.checked = true;
+            var ec = c.extraConfig || {};
+            document.getElementById('formTargetUrl').value = ec.targetUrl || '';
+            document.getElementById('formTargetMethod').value = ec.targetMethod || 'POST';
+            document.getElementById('formTargetTimeoutMs').value = ec.targetTimeoutMs || 30000;
+            document.getElementById('formTargetBodyTemplate').value = ec.targetBodyTemplate || '';
+            document.getElementById('formRegion').value = ec.region || '';
+            document.getElementById('formSellerId').value = ec.sellerId || '';
+            document.getElementById('formAwsAccessKey').value = ec.awsAccessKey || '';
+            document.getElementById('formEnvironment').value = ec.environment || '';
+            document.getElementById('headerBody').innerHTML = '';
+            if (ec.targetHeaders) {
+                Object.keys(ec.targetHeaders).forEach(function(k) {
+                    addHeaderRow(k, ec.targetHeaders[k]);
+                });
+            }
             document.getElementById('configModal').style.display = 'flex';
         }
     });
@@ -289,6 +397,17 @@ function saveConfig() {
     var apiName = document.getElementById('formApiName').value;
     if(!apiCode){showToast('请输入API编码','warning');return;}
     if(!apiName){showToast('请输入API名称','warning');return;}
+    var extraConfig = {
+        targetUrl: document.getElementById('formTargetUrl').value || null,
+        targetMethod: document.getElementById('formTargetMethod').value || null,
+        targetHeaders: collectHeaders(),
+        targetBodyTemplate: document.getElementById('formTargetBodyTemplate').value || null,
+        targetTimeoutMs: parseInt(document.getElementById('formTargetTimeoutMs').value) || null,
+        region: document.getElementById('formRegion').value || null,
+        sellerId: document.getElementById('formSellerId').value || null,
+        awsAccessKey: document.getElementById('formAwsAccessKey').value || null,
+        environment: document.getElementById('formEnvironment').value || null
+    };
     var data = {
         apiCode: apiCode,
         apiName: apiName,
@@ -297,18 +416,19 @@ function saveConfig() {
         requestTimeoutMs: parseInt(document.getElementById('formRequestTimeoutMs').value)||30000,
         autoRetryCount: parseInt(document.getElementById('formAutoRetryCount').value)||64,
         retryIntervalMs: parseInt(document.getElementById('formRetryIntervalMs').value)||5000,
-        status: document.querySelector('input[name=formStatus]:checked').value
+        status: document.querySelector('input[name=formStatus]:checked').value,
+        extraConfig: extraConfig
     };
     var url = editingApiCode ? BASE+'/update' : BASE+'/create';
     var method = editingApiCode ? 'PUT' : 'POST';
     fetch(url,{method:method,headers:{'Content-Type':'application/json'},body:JSON.stringify(data)}).then(function(r){return r.json();}).then(function(res){
         if(res.success){showToast(editingApiCode?'保存成功':'创建成功','success');hideModal();loadConfigs();}
-        else showToast(res.message||'操作失败','error');
+        else showToast(res.error&&res.error.message||'操作失败','error');
     });
 }
 
-function deleteConfig(apiCode) { if(!confirm('确定要删除该API配置吗？'))return; fetch(BASE+'/'+apiCode,{method:'DELETE'}).then(function(r){return r.json();}).then(function(res){if(res.success){showToast('删除成功','success');loadConfigs();}else showToast(res.message||'删除失败','error');}); }
-function toggleConfigStatus(apiCode,currentStatus) { var newStatus=currentStatus==='ENABLED'?'DISABLED':'ENABLED'; fetch(BASE+'/'+apiCode+'/'+(newStatus==='ENABLED'?'enable':'disable'),{method:'POST'}).then(function(r){return r.json();}).then(function(res){if(res.success){showToast('操作成功','success');loadConfigs();}else showToast(res.message||'操作失败','error');}); }
+function deleteConfig(apiCode) { if(!confirm('确定要删除该API配置吗？'))return; fetch(BASE+'/'+apiCode,{method:'DELETE'}).then(function(r){return r.json();}).then(function(res){if(res.success){showToast('删除成功','success');loadConfigs();}else showToast(res.error&&res.error.message||'删除失败','error');}); }
+function toggleConfigStatus(apiCode,currentStatus) { var newStatus=currentStatus==='ENABLED'?'DISABLED':'ENABLED'; fetch(BASE+'/'+apiCode+'/'+(newStatus==='ENABLED'?'enable':'disable'),{method:'POST'}).then(function(r){return r.json();}).then(function(res){if(res.success){showToast('操作成功','success');loadConfigs();}else showToast(res.error&&res.error.message||'操作失败','error');}); }
 function copyConfig(apiCode) { showToast('复制功能开发中','info'); }
 function viewChangeLog(apiCode) { parent.openTab('task-log',contextPath+'/task-log','调度日志',null); }
 

@@ -3,6 +3,7 @@ package com.apiflow.bootstrap.config;
 import com.apiflow.common.exception.BusinessException;
 import com.apiflow.common.exception.ErrorCode;
 import com.apiflow.common.result.Result;
+import com.apiflow.common.util.TraceContext;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
@@ -22,8 +23,8 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(BusinessException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public Result<?> handleBusinessException(BusinessException e) {
-        log.warn("Business exception: code={}, message={}, detail={}",
-                e.getErrorCode().getCode(), e.getErrorCode().getMessage(), e.getDetail());
+        log.warn("Business exception: code={}, message={}, detail={}, traceId={}",
+                e.getErrorCode().getCode(), e.getErrorCode().getMessage(), e.getDetail(), TraceContext.getTraceId());
         return Result.fail(e.getErrorCode(), e.getDetail());
     }
 
@@ -40,7 +41,7 @@ public class GlobalExceptionHandler {
                     .map(error -> error.getField() + ": " + error.getDefaultMessage())
                     .collect(Collectors.joining(", "));
         }
-        log.warn("Parameter validation failed: {}", message);
+        log.warn("Parameter validation failed: {}, traceId={}", message, TraceContext.getTraceId());
         return Result.fail(ErrorCode.PARAM_VALIDATION_FAILED, message);
     }
 
@@ -50,14 +51,14 @@ public class GlobalExceptionHandler {
         String message = e.getConstraintViolations().stream()
                 .map(ConstraintViolation::getMessage)
                 .collect(Collectors.joining(", "));
-        log.warn("Constraint violation: {}", message);
+        log.warn("Constraint violation: {}, traceId={}", message, TraceContext.getTraceId());
         return Result.fail(ErrorCode.PARAM_VALIDATION_FAILED, message);
     }
 
     @ExceptionHandler(Exception.class)
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
     public Result<?> handleException(Exception e) {
-        log.error("Unexpected exception", e);
+        log.error("Unexpected exception, traceId={}", TraceContext.getTraceId(), e);
         return Result.fail(ErrorCode.UNKNOWN_ERROR);
     }
 

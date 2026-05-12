@@ -11,6 +11,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class SaveApiGroupParam {
     private String groupNo;
+    private String groupCode;
     private String groupName;
     private String groupDescription;
     private Long createTimeMs;

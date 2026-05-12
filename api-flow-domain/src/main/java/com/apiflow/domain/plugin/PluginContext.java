@@ -1,5 +1,6 @@
 package com.apiflow.domain.plugin;
 
+import com.apiflow.domain.config.model.ExtraConfig;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -20,6 +21,7 @@ public class PluginContext {
     private Map<String, Object> params;
     private Map<String, Object> customData;
     private Map<String, Object> compensateData;
+    private ExtraConfig extraConfig;
     private volatile boolean interrupted;
 
     public static PluginContext of(String taskNo, String apiCode, String apiName,
@@ -31,6 +33,21 @@ public class PluginContext {
                 .params(params != null ? params : new ConcurrentHashMap<>())
                 .customData(customData != null ? customData : new ConcurrentHashMap<>())
                 .compensateData(new ConcurrentHashMap<>())
+                .interrupted(false)
+                .build();
+    }
+
+    public static PluginContext of(String taskNo, String apiCode, String apiName,
+                                   Map<String, Object> params, Map<String, Object> customData,
+                                   ExtraConfig extraConfig) {
+        return PluginContext.builder()
+                .taskNo(taskNo)
+                .apiCode(apiCode)
+                .apiName(apiName)
+                .params(params != null ? params : new ConcurrentHashMap<>())
+                .customData(customData != null ? customData : new ConcurrentHashMap<>())
+                .compensateData(new ConcurrentHashMap<>())
+                .extraConfig(extraConfig)
                 .interrupted(false)
                 .build();
     }

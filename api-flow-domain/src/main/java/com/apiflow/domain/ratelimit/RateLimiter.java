@@ -1,6 +1,6 @@
 package com.apiflow.domain.ratelimit;
 
-import com.apiflow.api.cache.CacheService;
+import com.apiflow.api.cache.CacheGateway;
 import com.apiflow.common.exception.BusinessException;
 import com.apiflow.common.exception.ErrorCode;
 import com.apiflow.domain.config.model.RateLimitConfig;
@@ -20,7 +20,7 @@ public class RateLimiter {
     private static final String RATE_LIMIT_KEY_PREFIX = "rate_limit:";
     private static final String CONCURRENCY_KEY_PREFIX = "concurrency:";
 
-    private final CacheService cacheService;
+    private final CacheGateway cacheGateway;
 
     public void checkRateLimit(RateLimitConfig config, String apiCode, Map<String, String> contextVars) {
         if (config == null || !Boolean.TRUE.equals(config.getEnabled())) {
@@ -42,7 +42,7 @@ public class RateLimiter {
 
     private void checkQpsLimit(String key, RateLimitRule rule) {
         String redisKey = RATE_LIMIT_KEY_PREFIX + key;
-        Object currentObj = cacheService.get(redisKey);
+        Object currentObj = cacheGateway.get(redisKey);
         long current = 0;
         if (currentObj != null) {
             try {
@@ -54,15 +54,15 @@ public class RateLimiter {
         if (current >= rule.getLimit()) {
             log.warn("QPS rate limit triggered: key={}, current={}, limit={}", key, current, rule.getLimit());
             throw new BusinessException(ErrorCode.RATE_LIMIT_TRIGGERED,
-                    "QPS限流触发, key=" + key + ", 当前QPS=" + current + ", 限制=" + rule.getLimit());
+                    "QPS limit triggered, key=" + key + ", current=" + current + ", limit=" + rule.getLimit());
         }
 
-        cacheService.set(redisKey, String.valueOf(current + 1), rule.getWindowSeconds(), TimeUnit.SECONDS);
+        cacheGateway.set(redisKey, String.valueOf(current + 1), rule.getWindowSeconds(), TimeUnit.SECONDS);
     }
 
     private void checkConcurrencyLimit(String key, RateLimitRule rule) {
         String redisKey = CONCURRENCY_KEY_PREFIX + key;
-        Object currentObj = cacheService.get(redisKey);
+        Object currentObj = cacheGateway.get(redisKey);
         long current = 0;
         if (currentObj != null) {
             try {
@@ -74,10 +74,10 @@ public class RateLimiter {
         if (current >= rule.getLimit()) {
             log.warn("Concurrency limit triggered: key={}, current={}, limit={}", key, current, rule.getLimit());
             throw new BusinessException(ErrorCode.RATE_LIMIT_TRIGGERED,
-                    "并发限流触发, key=" + key + ", 当前并发=" + current + ", 限制=" + rule.getLimit());
+                    "Concurrency limit triggered, key=" + key + ", current=" + current + ", limit=" + rule.getLimit());
         }
 
-        cacheService.set(redisKey, String.valueOf(current + 1), 300, TimeUnit.SECONDS);
+        cacheGateway.set(redisKey, String.valueOf(current + 1), 300, TimeUnit.SECONDS);
     }
 
     public void releaseConcurrency(String apiCode, RateLimitConfig config, Map<String, String> contextVars) {
@@ -88,12 +88,12 @@ public class RateLimiter {
             if ("CONCURRENCY".equals(rule.getType())) {
                 String key = buildRateLimitKey(rule, apiCode, contextVars);
                 String redisKey = CONCURRENCY_KEY_PREFIX + key;
-                Object currentObj = cacheService.get(redisKey);
+                Object currentObj = cacheGateway.get(redisKey);
                 if (currentObj != null) {
                     try {
                         long current = Long.parseLong(currentObj.toString());
                         if (current > 0) {
-                            cacheService.set(redisKey, String.valueOf(current - 1), 300, TimeUnit.SECONDS);
+                            cacheGateway.set(redisKey, String.valueOf(current - 1), 300, TimeUnit.SECONDS);
                         }
                     } catch (NumberFormatException ignored) {
                     }

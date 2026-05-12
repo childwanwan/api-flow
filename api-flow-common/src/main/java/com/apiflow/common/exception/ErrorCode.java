@@ -5,9 +5,28 @@ import lombok.Getter;
 @Getter
 public enum ErrorCode {
 
+    PARAM_IS_EMPTY("10001", "参数不能为空"),
+    PARAM_VALIDATION_FAILED("10002", "参数校验失败"),
+    DATA_NOT_EXIST("10003", "数据不存在"),
+
+
+
+
+    PAGE_PARAM_IS_EMPTY("20001", "分页参数不能为空"),
+    PAGE_SIZE_TOO_LARGE("20002", "每页大小不能超过1000"),
+
+
+    GROUP_CODE_EXIST("30001", "分组编码已存在"),
+    GROUP_CODE_EMPTY("30002", "分组编码不能为空"),
+    GROUP_NAME_EMPTY("30003", "分组名称不能为空"),
+
+
+
+
+
     API_NOT_FOUND("10001", "API不存在"),
     API_DISABLED("10002", "API已禁用"),
-    PARAM_VALIDATION_FAILED("10003", "参数校验失败"),
+    // PARAM_VALIDATION_FAILED("10003", "参数校验失败"),
     RATE_LIMIT_TRIGGERED("10004", "限流触发"),
     SYSTEM_BUSY("10005", "系统繁忙"),
     TASK_NOT_FOUND("10006", "任务不存在"),

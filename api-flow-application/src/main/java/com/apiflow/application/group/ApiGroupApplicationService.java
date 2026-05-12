@@ -2,97 +2,115 @@ package com.apiflow.application.group;
 
 import com.apiflow.api.repository.group.ApiGroupRepository;
 import com.apiflow.api.repository.group.idto.ApiGroupIDTO;
-import com.apiflow.api.repository.group.param.SaveApiGroupParam;
-import com.apiflow.api.repository.group.param.SelectApiGroupParam;
-import com.apiflow.api.repository.group.param.SelectOneApiGroupParam;
-import com.apiflow.api.repository.group.param.UpdateApiGroupParam;
-import com.apiflow.common.exception.BusinessException;
-import com.apiflow.common.exception.ErrorCode;
-import com.apiflow.common.repository.FieldCondition;
+import com.apiflow.api.repository.group.param.SelectPageApiGroupParam;
+import com.apiflow.application.group.converter.ApiGroupConverter;
+import com.apiflow.application.group.dto.ApiGroupDTO;
+import com.apiflow.application.group.param.ApiGroupCreateParam;
+import com.apiflow.application.group.param.ApiGroupDeleteParam;
+import com.apiflow.application.group.param.ApiGroupGetParam;
+import com.apiflow.application.group.param.ApiGroupPageParam;
+import com.apiflow.application.group.param.ApiGroupUpdateParam;
+import com.apiflow.common.result.PageResult;
+import com.apiflow.domain.group.command.CreateApiGroupCommand;
+import com.apiflow.domain.group.command.DeleteApiGroupCommand;
+import com.apiflow.domain.group.command.UpdateApiGroupCommand;
+import com.apiflow.domain.group.model.ApiGroup;
+import com.apiflow.domain.group.service.ApiGroupDomainService;
+import com.apiflow.api.mq.MessageProducer;
+import com.apiflow.domain.shared.event.DomainEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
-import java.util.List;
+import java.util.Map;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class ApiGroupApplicationService {
 
+    private final ApiGroupDomainService apiGroupDomainService;
     private final ApiGroupRepository apiGroupRepository;
+    private final MessageProducer messageProducer;
 
-    public ApiGroupIDTO createGroup(String groupNo, String groupName, String groupDescription, String operator) {
-        SelectOneApiGroupParam param = SelectOneApiGroupParam.builder()
-                .groupNo(FieldCondition.of(groupNo)).build();
-        ApiGroupIDTO existing = apiGroupRepository.selectOne(param);
-        if (existing != null && !Boolean.TRUE.equals(existing.getDeleted())) {
-            throw new BusinessException(ErrorCode.PARAM_VALIDATION_FAILED, "分组编号已存在");
-        }
+    private static final String TOPIC = "api-group-event";
 
-        long now = System.currentTimeMillis();
-        SaveApiGroupParam saveParam = SaveApiGroupParam.builder()
-                .groupNo(groupNo)
-                .groupName(groupName)
-                .groupDescription(groupDescription)
-                .createTimeMs(now)
-                .updateTimeMs(now)
-                .createOperator(operator)
-                .updateOperator(operator)
+    public ApiGroupDTO createGroup(ApiGroupCreateParam param) {
+        CreateApiGroupCommand command = CreateApiGroupCommand.builder()
+                .groupCode(param.getGroupCode())
+                .groupName(param.getGroupName())
+                .groupDescription(param.getGroupDescription())
+                .operator(param.getOperator())
                 .build();
-        return apiGroupRepository.save(saveParam);
+        ApiGroup group = apiGroupDomainService.create(command);
+        publishDomainEvents(group);
+        return toDTO(group);
     }
 
-    public ApiGroupIDTO updateGroup(String groupNo, String groupName, String groupDescription, String operator) {
-        SelectOneApiGroupParam param = SelectOneApiGroupParam.builder()
-                .groupNo(FieldCondition.of(groupNo)).build();
-        ApiGroupIDTO existing = apiGroupRepository.selectOne(param);
-        if (existing == null || Boolean.TRUE.equals(existing.getDeleted())) {
-            throw new BusinessException(ErrorCode.API_NOT_FOUND, "分组不存在");
-        }
-
-        UpdateApiGroupParam updateParam = UpdateApiGroupParam.builder()
-                .id(existing.getId())
-                .groupNo(groupNo)
-                .groupName(groupName)
-                .groupDescription(groupDescription)
-                .updateTimeMs(System.currentTimeMillis())
-                .updateOperator(operator)
+    public ApiGroupDTO updateGroup(ApiGroupUpdateParam param) {
+        UpdateApiGroupCommand command = UpdateApiGroupCommand.builder()
+                .groupNo(param.getGroupNo())
+                .groupCode(param.getGroupCode())
+                .groupName(param.getGroupName())
+                .groupDescription(param.getGroupDescription())
+                .operator(param.getOperator())
                 .build();
-        return apiGroupRepository.update(updateParam);
+        ApiGroup group = apiGroupDomainService.update(command);
+        publishDomainEvents(group);
+        return toDTO(group);
     }
 
-    public ApiGroupIDTO getGroup(String groupNo) {
-        SelectOneApiGroupParam param = SelectOneApiGroupParam.builder()
-                .groupNo(FieldCondition.of(groupNo)).build();
-        ApiGroupIDTO group = apiGroupRepository.selectOne(param);
-        if (group == null || Boolean.TRUE.equals(group.getDeleted())) {
-            throw new BusinessException(ErrorCode.API_NOT_FOUND, "分组不存在");
-        }
-        return group;
+    public ApiGroupDTO getGroup(ApiGroupGetParam param) {
+        ApiGroup group = apiGroupDomainService.getByGroupNo(param.getGroupNo());
+        return toDTO(group);
     }
 
-    public List<ApiGroupIDTO> listGroups(String groupNo, String groupName) {
-        SelectApiGroupParam param = SelectApiGroupParam.builder()
-                .groupNo(groupNo != null ? FieldCondition.<String>builder().like(groupNo).build() : null)
-                .groupName(groupName != null ? FieldCondition.<String>builder().like(groupName).build() : null)
+    public void deleteGroup(ApiGroupDeleteParam param) {
+        DeleteApiGroupCommand command = DeleteApiGroupCommand.builder()
+                .groupNo(param.getGroupNo())
+                .operator(param.getOperator())
                 .build();
-        return apiGroupRepository.selectList(param);
+        ApiGroup group = apiGroupDomainService.delete(command);
+        publishDomainEvents(group);
     }
 
-    public void deleteGroup(String groupNo, String operator) {
-        SelectOneApiGroupParam param = SelectOneApiGroupParam.builder()
-                .groupNo(FieldCondition.of(groupNo)).build();
-        ApiGroupIDTO existing = apiGroupRepository.selectOne(param);
-        if (existing == null || Boolean.TRUE.equals(existing.getDeleted())) {
-            throw new BusinessException(ErrorCode.API_NOT_FOUND, "分组不存在");
-        }
+    public PageResult<ApiGroupDTO> pageGroups(ApiGroupPageParam param) {
+        SelectPageApiGroupParam queryParam = ApiGroupConverter.INSTANCE.apiGroupPageParam2SelectPageApiGroupParam(param);
+        PageResult<ApiGroupIDTO> page = apiGroupRepository.selectPage(queryParam);
+        return PageResult.of(ApiGroupConverter.INSTANCE.apiGroupIDTO2ApiGroupDTOList(page.getRecords()),
+                page.getTotal(), param.getEffectiveCurrent(), param.getEffectiveSize());
+    }
 
-        UpdateApiGroupParam updateParam = UpdateApiGroupParam.builder()
-                .id(existing.getId())
-                .updateTimeMs(System.currentTimeMillis())
-                .updateOperator(operator)
+    private void publishDomainEvents(ApiGroup group) {
+        for (DomainEvent event : group.getDomainEvents()) {
+            try {
+                Map<String, String> headers = Map.of(
+                        "eventId", event.getEventId(),
+                        "eventType", event.getEventType(),
+                        "aggregateType", event.getAggregateType(),
+                        "aggregateId", event.getAggregateId()
+                );
+                messageProducer.send(TOPIC, event, headers);
+                log.info("Published domain event to Kafka: type={}, aggregateId={}", event.getEventType(), event.getAggregateId());
+            } catch (Exception e) {
+                log.error("Failed to publish domain event to Kafka: type={}, aggregateId={}, eventId={}",
+                        event.getEventType(), event.getAggregateId(), event.getEventId(), e);
+            }
+        }
+        group.clearDomainEvents();
+    }
+
+    private ApiGroupDTO toDTO(ApiGroup group) {
+        return ApiGroupDTO.builder()
+                .id(group.getId())
+                .groupNo(group.getGroupNo())
+                .groupCode(group.getGroupCode())
+                .groupName(group.getGroupName())
+                .groupDescription(group.getGroupDescription())
+                .createTimeMs(group.getCreateTimeMs())
+                .updateTimeMs(group.getUpdateTimeMs())
+                .createOperator(group.getCreateOperator())
+                .updateOperator(group.getUpdateOperator())
                 .build();
-        apiGroupRepository.update(updateParam);
     }
 }

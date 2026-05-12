@@ -1,5 +1,6 @@
 package com.apiflow.api.repository.task.param;
 
+import com.apiflow.common.repository.ConditionNode;
 import com.apiflow.common.repository.FieldCondition;
 import com.apiflow.common.repository.QueryCondition;
 import lombok.AllArgsConstructor;
@@ -30,4 +31,5 @@ public class SelectTaskParam {
     private Integer offset;
     private List<TaskField> selectFields;
     private List<QueryCondition<TaskField>> conditions;
+    private ConditionNode condition;
 }

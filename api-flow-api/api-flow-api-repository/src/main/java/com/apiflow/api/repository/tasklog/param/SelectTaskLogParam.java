@@ -1,5 +1,6 @@
 package com.apiflow.api.repository.tasklog.param;
 
+import com.apiflow.common.repository.ConditionNode;
 import com.apiflow.common.repository.FieldCondition;
 import com.apiflow.common.repository.QueryCondition;
 import lombok.AllArgsConstructor;
@@ -20,4 +21,5 @@ public class SelectTaskLogParam {
     private Integer offset;
     private List<TaskLogField> selectFields;
     private List<QueryCondition<TaskLogField>> conditions;
+    private ConditionNode condition;
 }

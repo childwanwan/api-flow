@@ -6,6 +6,7 @@ import com.apiflow.api.repository.plugin.param.SavePluginConfigParam;
 import com.apiflow.api.repository.plugin.param.SelectOnePluginConfigParam;
 import com.apiflow.api.repository.plugin.param.SelectPluginConfigParam;
 import com.apiflow.api.repository.plugin.param.UpdatePluginConfigParam;
+import com.apiflow.api.repository.plugin.param.PluginConfigField;
 import com.apiflow.infrastructure.persistence.mybatis.plugin.converter.PluginConfigConverter;
 import com.apiflow.infrastructure.persistence.mybatis.plugin.entity.PluginConfigPO;
 import com.apiflow.infrastructure.persistence.mybatis.util.QueryConditionHelper;
@@ -15,6 +16,8 @@ import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.stream.Collectors;
+
+import static com.apiflow.infrastructure.persistence.mybatis.util.QueryConditionHelper.createFieldResolver;
 
 @Repository
 @RequiredArgsConstructor
@@ -42,6 +45,7 @@ public class PluginConfigRepositoryImpl implements PluginConfigRepository {
         QueryConditionHelper.applyFieldCondition(wrapper, PluginConfigPO::getPluginCode, param.getPluginCode());
         QueryConditionHelper.applyFieldCondition(wrapper, PluginConfigPO::getPluginName, param.getPluginName());
         QueryConditionHelper.applyConditions(wrapper, param.getConditions());
+        QueryConditionHelper.applyConditionNode(wrapper, param.getCondition(), createFieldResolver(PluginConfigField.values()));
         PluginConfigPO po = pluginConfigMapper.selectOne(wrapper);
         return po == null ? null : PluginConfigConverter.INSTANCE.poToIDTO(po);
     }
@@ -53,6 +57,7 @@ public class PluginConfigRepositoryImpl implements PluginConfigRepository {
         QueryConditionHelper.applyFieldCondition(wrapper, PluginConfigPO::getPluginName, param.getPluginName());
         QueryConditionHelper.applyFieldCondition(wrapper, PluginConfigPO::getEnabled, param.getEnabled());
         QueryConditionHelper.applyConditions(wrapper, param.getConditions());
+        QueryConditionHelper.applyConditionNode(wrapper, param.getCondition(), createFieldResolver(PluginConfigField.values()));
         wrapper.orderByAsc(PluginConfigPO::getOrderNum);
         if (param.getLimit() != null) {
             wrapper.last("LIMIT " + param.getLimit());

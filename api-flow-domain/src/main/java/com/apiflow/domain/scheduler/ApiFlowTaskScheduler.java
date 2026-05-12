@@ -1,5 +1,8 @@
 package com.apiflow.domain.scheduler;
 
+import com.apiflow.api.repository.config.ApiConfigRepository;
+import com.apiflow.api.repository.config.idto.ApiConfigIDTO;
+import com.apiflow.api.repository.config.param.SelectOneApiConfigParam;
 import com.apiflow.api.repository.task.TaskRepository;
 import com.apiflow.api.repository.task.idto.TaskIDTO;
 import com.apiflow.api.repository.task.param.SelectTaskParam;
@@ -13,8 +16,14 @@ import com.apiflow.common.exception.BusinessException;
 import com.apiflow.common.exception.ErrorCode;
 import com.apiflow.common.repository.FieldCondition;
 import com.apiflow.common.util.JsonUtil;
+import com.apiflow.common.util.TraceContext;
 import com.apiflow.domain.alarm.AlarmEvent;
 import com.apiflow.domain.alarm.AlarmSender;
+import com.apiflow.domain.config.converter.ApiConfigConverter;
+import com.apiflow.domain.config.model.ApiConfigDO;
+import com.apiflow.domain.config.model.ExtraConfig;
+import com.apiflow.domain.config.model.PluginChainItem;
+import com.apiflow.domain.config.model.PluginConfig;
 import com.apiflow.domain.lock.DistributedLock;
 import com.apiflow.domain.plugin.PluginChainExecutor;
 import com.apiflow.domain.plugin.PluginContext;
@@ -26,6 +35,8 @@ import org.springframework.context.SmartLifecycle;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 
+import org.springframework.beans.factory.annotation.Qualifier;
+
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.*;
@@ -33,32 +44,56 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 @Slf4j
 @Component
-@RequiredArgsConstructor
 public class ApiFlowTaskScheduler implements SmartLifecycle {
+
+    private static final long LEADER_CHECK_INTERVAL_MS = 5000;
+    private static final long SIGNAL_CHECK_INTERVAL_MS = 2000;
+    private static final ApiConfigConverter API_CONFIG_CONVERTER = ApiConfigConverter.INSTANCE;
 
     private final TaskRepository taskRepository;
     private final TaskLogRepository taskLogRepository;
+    private final ApiConfigRepository apiConfigRepository;
     private final DistributedLock distributedLock;
     private final PluginChainExecutor pluginChainExecutor;
     private final ReceiptService receiptService;
     private final AlarmSender alarmSender;
+    private final SchedulerLeaderElection leaderElection;
+    private final TaskWakeUpSignal wakeUpSignal;
 
     private final ConcurrentMap<String, AtomicBoolean> localInterruptFlags = new ConcurrentHashMap<>();
-    private final ExecutorService executorService = Executors.newFixedThreadPool(
-            Runtime.getRuntime().availableProcessors() * 2,
-            r -> {
-                Thread t = new Thread(r, "task-executor");
-                t.setDaemon(true);
-                return t;
-            }
-    );
-    private final ScheduledExecutorService retryScheduler = Executors.newSingleThreadScheduledExecutor(
-            r -> {
-                Thread t = new Thread(r, "retry-scheduler");
-                t.setDaemon(true);
-                return t;
-            }
-    );
+    private final ExecutorService taskExecutor;
+    private final ScheduledExecutorService retryScheduler;
+    private final ScheduledExecutorService leaderRenewScheduler;
+    private final ScheduledExecutorService signalCheckScheduler;
+
+    public ApiFlowTaskScheduler(
+            TaskRepository taskRepository,
+            TaskLogRepository taskLogRepository,
+            ApiConfigRepository apiConfigRepository,
+            DistributedLock distributedLock,
+            PluginChainExecutor pluginChainExecutor,
+            ReceiptService receiptService,
+            AlarmSender alarmSender,
+            SchedulerLeaderElection leaderElection,
+            TaskWakeUpSignal wakeUpSignal,
+            @Qualifier("taskExecutor") ExecutorService taskExecutor,
+            @Qualifier("retryScheduler") ScheduledExecutorService retryScheduler,
+            @Qualifier("leaderRenewScheduler") ScheduledExecutorService leaderRenewScheduler,
+            @Qualifier("signalCheckScheduler") ScheduledExecutorService signalCheckScheduler) {
+        this.taskRepository = taskRepository;
+        this.taskLogRepository = taskLogRepository;
+        this.apiConfigRepository = apiConfigRepository;
+        this.distributedLock = distributedLock;
+        this.pluginChainExecutor = pluginChainExecutor;
+        this.receiptService = receiptService;
+        this.alarmSender = alarmSender;
+        this.leaderElection = leaderElection;
+        this.wakeUpSignal = wakeUpSignal;
+        this.taskExecutor = taskExecutor;
+        this.retryScheduler = retryScheduler;
+        this.leaderRenewScheduler = leaderRenewScheduler;
+        this.signalCheckScheduler = signalCheckScheduler;
+    }
 
     private final Object wakeLock = new Object();
     private volatile boolean running = false;
@@ -70,10 +105,15 @@ public class ApiFlowTaskScheduler implements SmartLifecycle {
             return;
         }
         running = true;
+        leaderElection.tryAcquireLeadership();
+        leaderRenewScheduler.scheduleAtFixedRate(this::renewOrAcquireLeadership,
+                SIGNAL_CHECK_INTERVAL_MS, SIGNAL_CHECK_INTERVAL_MS, TimeUnit.MILLISECONDS);
+        signalCheckScheduler.scheduleAtFixedRate(this::checkWakeUpSignal,
+                SIGNAL_CHECK_INTERVAL_MS, SIGNAL_CHECK_INTERVAL_MS, TimeUnit.MILLISECONDS);
         dispatchThread = new Thread(this::dispatchLoop, "task-dispatcher");
         dispatchThread.setDaemon(true);
         dispatchThread.start();
-        log.info("ApiFlowTaskScheduler dispatch thread started");
+        log.info("ApiFlowTaskScheduler dispatch thread started, node=[{}]", leaderElection.getInstanceId());
     }
 
     @Override
@@ -88,7 +128,10 @@ public class ApiFlowTaskScheduler implements SmartLifecycle {
                 Thread.currentThread().interrupt();
             }
         }
-        executorService.shutdownNow();
+        leaderRenewScheduler.shutdownNow();
+        signalCheckScheduler.shutdownNow();
+        leaderElection.relinquishLeadership();
+        taskExecutor.shutdownNow();
         retryScheduler.shutdownNow();
         log.info("ApiFlowTaskScheduler stopped");
     }
@@ -103,10 +146,45 @@ public class ApiFlowTaskScheduler implements SmartLifecycle {
         return Integer.MAX_VALUE - 1;
     }
 
+    private void renewOrAcquireLeadership() {
+        if (leaderElection.isLeader()) {
+            boolean renewed = leaderElection.renewLeadership();
+            if (!renewed) {
+                log.warn("Node [{}] lost leadership during renewal, will re-try acquire", leaderElection.getInstanceId());
+                wakeUp();
+            }
+        } else {
+            leaderElection.tryAcquireLeadership();
+            if (leaderElection.isLeader()) {
+                wakeUp();
+            }
+        }
+    }
+
+    private void checkWakeUpSignal() {
+        if (leaderElection.isLeader() && wakeUpSignal.checkAndConsume()) {
+            wakeUp();
+        }
+    }
+
     private void dispatchLoop() {
-        log.info("Task dispatch loop entered");
+        log.info("Task dispatch loop entered, node=[{}]", leaderElection.getInstanceId());
         while (running) {
             try {
+                if (!leaderElection.isLeader()) {
+                    synchronized (wakeLock) {
+                        try {
+                            wakeLock.wait(LEADER_CHECK_INTERVAL_MS);
+                        } catch (InterruptedException e) {
+                            Thread.currentThread().interrupt();
+                            if (!running) {
+                                break;
+                            }
+                        }
+                    }
+                    continue;
+                }
+
                 boolean hasTask = pullAndDispatch();
                 if (!hasTask) {
                     synchronized (wakeLock) {
@@ -179,7 +257,7 @@ public class ApiFlowTaskScheduler implements SmartLifecycle {
                     }
                     continue;
                 }
-                executorService.submit(() -> executeTask(taskDto));
+                taskExecutor.submit(TraceContext.wrap(() -> executeTask(taskDto)));
                 dispatched = true;
             }
 
@@ -196,7 +274,10 @@ public class ApiFlowTaskScheduler implements SmartLifecycle {
 
     public void executeTask(TaskIDTO taskDto) {
         String taskNo = taskDto.getTaskNo();
+        TraceContext.setTraceId(taskNo);
+
         if (!distributedLock.tryLock(taskNo, SystemConstant.DEFAULT_TASK_LOCK_EXPIRE_SECONDS)) {
+            TraceContext.clear();
             return;
         }
 
@@ -234,6 +315,7 @@ public class ApiFlowTaskScheduler implements SmartLifecycle {
         } finally {
             distributedLock.unlock(taskNo);
             localInterruptFlags.remove(taskNo);
+            TraceContext.clear();
         }
     }
 
@@ -244,21 +326,49 @@ public class ApiFlowTaskScheduler implements SmartLifecycle {
             throw new BusinessException(ErrorCode.TASK_STATUS_NOT_ALLOWED, "Task interrupted");
         }
 
+        ApiConfigDO config = null;
+        try {
+            SelectOneApiConfigParam configParam = SelectOneApiConfigParam.builder()
+                    .apiCode(FieldCondition.of(taskDto.getApiCode())).build();
+            ApiConfigIDTO configDto = apiConfigRepository.selectOne(configParam);
+            if (configDto != null && !Boolean.TRUE.equals(configDto.getDeleted())) {
+                config = API_CONFIG_CONVERTER.apiConfigIDTOToApiConfigDO(configDto);
+            }
+        } catch (Exception e) {
+            log.warn("Failed to load ApiConfig for apiCode={}, using defaults", taskDto.getApiCode(), e);
+        }
+
+        ExtraConfig extraConfig = config != null ? config.getExtraConfig() : null;
+
         PluginContext context = PluginContext.of(
                 taskDto.getTaskNo(),
                 taskDto.getApiCode(),
                 taskDto.getApiName(),
                 null,
-                null
+                null,
+                extraConfig
         );
 
-        List<PluginChainExecutor.PluginChainItemConfig> chainItems = List.of(
+        List<PluginChainExecutor.PluginChainItemConfig> chainItems = buildChainItems(config);
+
+        return pluginChainExecutor.execute(context, chainItems);
+    }
+
+    private List<PluginChainExecutor.PluginChainItemConfig> buildChainItems(ApiConfigDO config) {
+        if (config != null && config.getPluginConfig() != null
+                && Boolean.TRUE.equals(config.getPluginConfig().getEnabled())
+                && config.getPluginConfig().getPluginChain() != null) {
+            return config.getPluginConfig().getPluginChain().stream()
+                    .map(item -> new PluginChainExecutor.PluginChainItemConfig(
+                            item.getPluginCode(), item.getOrder(),
+                            Boolean.TRUE.equals(item.getEnabled()), item.getConfig()))
+                    .toList();
+        }
+        return List.of(
                 new PluginChainExecutor.PluginChainItemConfig("PARAM_VALIDATOR", 1, true, null),
                 new PluginChainExecutor.PluginChainItemConfig("RATE_LIMIT_CHECK", 2, true, null),
                 new PluginChainExecutor.PluginChainItemConfig("BUSINESS_EXECUTOR", 3, true, null)
         );
-
-        return pluginChainExecutor.execute(context, chainItems);
     }
 
     private void handleTaskFailure(TaskIDTO taskDto, Exception e) {

@@ -3,9 +3,9 @@ package com.apiflow.infrastructure.mq;
 import com.apiflow.api.mq.MessageConsumer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.data.redis.connection.Message;
 import org.springframework.data.redis.connection.MessageListener;
-import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.listener.ChannelTopic;
 import org.springframework.data.redis.listener.RedisMessageListenerContainer;
 import org.springframework.stereotype.Service;
@@ -17,6 +17,7 @@ import java.util.function.Consumer;
 @Slf4j
 @Service
 @RequiredArgsConstructor
+@ConditionalOnProperty(name = "api-flow.mq.type", havingValue = "redis", matchIfMissing = true)
 public class RedisMessageConsumer implements MessageConsumer {
 
     private final RedisMessageListenerContainer listenerContainer;

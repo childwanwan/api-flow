@@ -13,6 +13,8 @@ public enum MatchType {
     LT,
     LE,
     LIKE,
+    LIKE_LEFT,
+    LIKE_RIGHT,
     IN,
     NOT_IN,
     BETWEEN,

@@ -1,6 +1,6 @@
 package com.apiflow.application.user;
 
-import com.apiflow.api.cache.CacheService;
+import com.apiflow.api.cache.CacheGateway;
 import com.apiflow.common.enums.EnableStatus;
 import com.apiflow.common.repository.FieldCondition;
 import com.apiflow.common.util.MD5Util;
@@ -23,7 +23,7 @@ public class AuthService {
     private static final long TOKEN_EXPIRE_HOURS = 24;
 
     private final UserRepository userRepository;
-    private final CacheService cacheService;
+    private final CacheGateway cacheGateway;
 
     public String login(String username, String password) {
         SelectOneUserParam selectOneUserParam = SelectOneUserParam.builder()
@@ -36,12 +36,12 @@ public class AuthService {
         if (!EnableStatus.ENABLED.getValue().equals(user.getStatus())) {
             return null;
         }
-        String encryptedPassword = MD5Util.encode(password);
-        if (!encryptedPassword.equals(user.getPassword())) {
+        // user的password已经是加密了的，参数password也是加密了的
+        if (!user.getPassword().equals(password)) {
             return null;
         }
         String token = UUID.randomUUID().toString().replace("-", "");
-        cacheService.set(TOKEN_PREFIX + token, username, TOKEN_EXPIRE_HOURS, TimeUnit.HOURS);
+        cacheGateway.set(TOKEN_PREFIX + token, username, TOKEN_EXPIRE_HOURS, TimeUnit.HOURS);
         UpdateUserParam updateUserParam = UpdateUserParam.builder()
                 .id(user.getId())
                 .lastLoginTimeMs(System.currentTimeMillis())
@@ -52,7 +52,7 @@ public class AuthService {
 
     public void logout(String token) {
         if (token != null) {
-            cacheService.delete(TOKEN_PREFIX + token);
+            cacheGateway.delete(TOKEN_PREFIX + token);
         }
     }
 
@@ -60,7 +60,7 @@ public class AuthService {
         if (token == null) {
             return null;
         }
-        String username = (String) cacheService.get(TOKEN_PREFIX + token);
+        String username = (String) cacheGateway.get(TOKEN_PREFIX + token);
         if (username == null) {
             return null;
         }
@@ -86,19 +86,19 @@ public class AuthService {
         if (token == null) {
             return null;
         }
-        return (String) cacheService.get(TOKEN_PREFIX + token);
+        return (String) cacheGateway.get(TOKEN_PREFIX + token);
     }
 
     public boolean isValidToken(String token) {
         if (token == null) {
             return false;
         }
-        return cacheService.hasKey(TOKEN_PREFIX + token);
+        return cacheGateway.hasKey(TOKEN_PREFIX + token);
     }
 
     public void refreshToken(String token) {
         if (isValidToken(token)) {
-            cacheService.expire(TOKEN_PREFIX + token, TOKEN_EXPIRE_HOURS, TimeUnit.HOURS);
+            cacheGateway.expire(TOKEN_PREFIX + token, TOKEN_EXPIRE_HOURS, TimeUnit.HOURS);
         }
     }
 }

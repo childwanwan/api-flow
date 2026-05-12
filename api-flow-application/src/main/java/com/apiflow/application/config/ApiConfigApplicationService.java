@@ -14,6 +14,7 @@ import com.apiflow.common.repository.FieldCondition;
 import com.apiflow.common.util.JsonUtil;
 import com.apiflow.domain.config.converter.ApiConfigConverter;
 import com.apiflow.domain.config.model.ApiConfigDO;
+import com.apiflow.domain.config.model.ExtraConfig;
 import com.apiflow.domain.config.service.ApiConfigDomainService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -32,6 +33,7 @@ public class ApiConfigApplicationService {
     private static final ApiConfigConverter API_CONFIG_CONVERTER = ApiConfigConverter.INSTANCE;
 
     public ApiConfigDTO createConfig(ApiConfigCreateCommand command) {
+        ExtraConfig extraConfig = parseExtraConfig(command.getExtraConfig());
         ApiConfigDO config = apiConfigDomainService.createConfig(
                 command.getGroupNo(),
                 command.getApiCode(),
@@ -41,6 +43,7 @@ public class ApiConfigApplicationService {
                 command.getAutoRetryCount(),
                 command.getRetryIntervalMs(),
                 command.getMaxQueueSize(),
+                extraConfig,
                 command.getOperator()
         );
         saveChangeLog(command.getApiCode(), "CREATE", null, config, command.getOperator());
@@ -49,6 +52,7 @@ public class ApiConfigApplicationService {
 
     public ApiConfigDTO updateConfig(ApiConfigUpdateCommand command) {
         ApiConfigDO beforeConfig = apiConfigDomainService.getConfig(command.getApiCode());
+        ExtraConfig extraConfig = parseExtraConfig(command.getExtraConfig());
         ApiConfigDO config = apiConfigDomainService.updateConfig(
                 command.getApiCode(),
                 command.getApiName(),
@@ -57,6 +61,7 @@ public class ApiConfigApplicationService {
                 command.getAutoRetryCount(),
                 command.getRetryIntervalMs(),
                 command.getMaxQueueSize(),
+                extraConfig,
                 command.getOperator()
         );
         saveChangeLog(command.getApiCode(), "UPDATE", beforeConfig, config, command.getOperator());
@@ -203,7 +208,24 @@ public class ApiConfigApplicationService {
                 .sellerId(config.getSellerId())
                 .awsAccessKey(config.getAwsAccessKey())
                 .environment(config.getEnvironment())
+                .targetUrl(config.getTargetUrl())
+                .targetMethod(config.getTargetMethod())
+                .targetHeaders(config.getTargetHeaders())
+                .targetBodyTemplate(config.getTargetBodyTemplate())
+                .targetTimeoutMs(config.getTargetTimeoutMs())
                 .build();
+    }
+
+    private ExtraConfig parseExtraConfig(String extraConfigJson) {
+        if (extraConfigJson == null || extraConfigJson.isEmpty()) {
+            return null;
+        }
+        try {
+            return JsonUtil.toObject(extraConfigJson, ExtraConfig.class);
+        } catch (Exception e) {
+            log.warn("Failed to parse extraConfig JSON: {}", extraConfigJson, e);
+            return null;
+        }
     }
 
 }

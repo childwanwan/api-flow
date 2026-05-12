@@ -14,6 +14,8 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import static com.apiflow.infrastructure.persistence.mybatis.util.QueryConditionHelper.createFieldResolver;
+
 @Repository
 @RequiredArgsConstructor
 public class ApiConfigRepositoryImpl implements ApiConfigRepository {
@@ -41,11 +43,13 @@ public class ApiConfigRepositoryImpl implements ApiConfigRepository {
             QueryConditionHelper.applySelectFields(wrapper, param.getSelectFields());
             applyConditions(wrapper, param);
             QueryConditionHelper.applyConditions(wrapper, param.getConditions());
+            QueryConditionHelper.applyConditionNode(wrapper, param.getCondition(), createFieldResolver(ApiConfigField.values()));
             ApiConfigPO configDO = apiConfigMapper.selectOne(wrapper);
             return configDO == null ? null : ApiConfigConverter.INSTANCE.apiConfigEntityPOToApiConfigIDTO(configDO);
         }
         LambdaQueryWrapper<ApiConfigPO> wrapper = buildLambdaQueryWrapper(param);
         QueryConditionHelper.applyConditions(wrapper, param.getConditions());
+        QueryConditionHelper.applyConditionNode(wrapper, param.getCondition(), createFieldResolver(ApiConfigField.values()));
         ApiConfigPO configDO = apiConfigMapper.selectOne(wrapper);
         return configDO == null ? null : ApiConfigConverter.INSTANCE.apiConfigEntityPOToApiConfigIDTO(configDO);
     }
@@ -57,6 +61,7 @@ public class ApiConfigRepositoryImpl implements ApiConfigRepository {
             QueryConditionHelper.applySelectFields(wrapper, param.getSelectFields());
             applyConditions(wrapper, param);
             QueryConditionHelper.applyConditions(wrapper, param.getConditions());
+            QueryConditionHelper.applyConditionNode(wrapper, param.getCondition(), createFieldResolver(ApiConfigField.values()));
             List<ApiConfigPO> configDOList = apiConfigMapper.selectList(wrapper);
             return configDOList.stream()
                     .map(ApiConfigConverter.INSTANCE::apiConfigEntityPOToApiConfigIDTO)
@@ -64,6 +69,7 @@ public class ApiConfigRepositoryImpl implements ApiConfigRepository {
         }
         LambdaQueryWrapper<ApiConfigPO> wrapper = buildLambdaQueryWrapper(param);
         QueryConditionHelper.applyConditions(wrapper, param.getConditions());
+        QueryConditionHelper.applyConditionNode(wrapper, param.getCondition(), createFieldResolver(ApiConfigField.values()));
         List<ApiConfigPO> configDOList = apiConfigMapper.selectList(wrapper);
         return configDOList.stream()
                 .map(ApiConfigConverter.INSTANCE::apiConfigEntityPOToApiConfigIDTO)

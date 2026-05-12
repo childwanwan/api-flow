@@ -19,6 +19,9 @@ public class ApiGroupPO {
     @TableField("group_no")
     private String groupNo;
 
+    @TableField("group_code")
+    private String groupCode;
+
     @TableField("group_name")
     private String groupName;
 

@@ -20,6 +20,8 @@ public class FieldCondition<T> {
     private T lt;
     private T le;
     private String like;
+    private String likeLeft;
+    private String likeRight;
     private List<T> in;
     private List<T> notIn;
     private T betweenStart;
@@ -33,7 +35,7 @@ public class FieldCondition<T> {
 
     public boolean hasAnyCondition() {
         return eq != null || ne != null || gt != null || ge != null
-                || lt != null || le != null || like != null
+                || lt != null || le != null || like != null || likeLeft != null || likeRight != null
                 || (in != null && !in.isEmpty()) || (notIn != null && !notIn.isEmpty())
                 || betweenStart != null || betweenEnd != null
                 || Boolean.TRUE.equals(isNull) || Boolean.TRUE.equals(isNotNull);

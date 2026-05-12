@@ -1,6 +1,6 @@
 package com.apiflow.domain.lock;
 
-import com.apiflow.api.cache.CacheService;
+import com.apiflow.api.cache.CacheGateway;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -9,22 +9,19 @@ import java.util.concurrent.TimeUnit;
 
 @Slf4j
 @Component
+@Deprecated
 @RequiredArgsConstructor
 public class DistributedLock {
 
     private static final String LOCK_PREFIX = "task_lock:";
 
-    private final CacheService cacheService;
+    private final CacheGateway cacheGateway;
 
     public boolean tryLock(String key, long expireSeconds) {
         String lockKey = LOCK_PREFIX + key;
         try {
-            Object existing = cacheService.get(lockKey);
-            if (existing != null) {
-                return false;
-            }
-            cacheService.set(lockKey, "locked", expireSeconds, TimeUnit.SECONDS);
-            return true;
+            Boolean acquired = cacheGateway.setIfAbsent(lockKey, "locked", expireSeconds, TimeUnit.SECONDS);
+            return acquired != null && acquired;
         } catch (Exception e) {
             log.error("Failed to acquire lock: {}", lockKey, e);
             return false;
@@ -34,7 +31,7 @@ public class DistributedLock {
     public void unlock(String key) {
         String lockKey = LOCK_PREFIX + key;
         try {
-            cacheService.delete(lockKey);
+            cacheGateway.delete(lockKey);
         } catch (Exception e) {
             log.error("Failed to release lock: {}", lockKey, e);
         }
@@ -42,6 +39,6 @@ public class DistributedLock {
 
     public boolean isLocked(String key) {
         String lockKey = LOCK_PREFIX + key;
-        return cacheService.hasKey(lockKey);
+        return cacheGateway.hasKey(lockKey);
     }
 }

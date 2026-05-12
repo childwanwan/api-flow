@@ -1,16 +1,25 @@
 package com.apiflow.interfaces.biz.group;
 
-import com.apiflow.api.repository.group.idto.ApiGroupIDTO;
 import com.apiflow.application.group.ApiGroupApplicationService;
+import com.apiflow.application.group.dto.ApiGroupDTO;
+import com.apiflow.application.group.param.*;
+import com.apiflow.application.user.AuthService;
+import com.apiflow.common.exception.BusinessException;
+import com.apiflow.common.exception.ErrorCode;
+import com.apiflow.common.result.PageResult;
 import com.apiflow.common.result.Result;
+import com.apiflow.interfaces.biz.group.converter.ApiGroupConverter;
+import com.apiflow.interfaces.biz.group.request.ApiGroupCreateRequest;
+import com.apiflow.interfaces.biz.group.request.ApiGroupPageRequest;
+import com.apiflow.interfaces.biz.group.request.ApiGroupUpdateRequest;
+import com.apiflow.interfaces.biz.group.vo.ApiGroupVO;
 import com.apiflow.interfaces.util.TokenUtil;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.ObjectUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
-import java.util.Map;
 
 @Slf4j
 @RestController
@@ -19,45 +28,79 @@ import java.util.Map;
 public class ApiGroupController {
 
     private final ApiGroupApplicationService apiGroupApplicationService;
-    private final com.apiflow.application.user.AuthService authService;
+    private final AuthService authService;
 
     @PostMapping("/create")
-    public Result<ApiGroupIDTO> createGroup(@RequestBody Map<String, Object> request, HttpServletRequest httpRequest) {
-        String groupNo = (String) request.get("groupNo");
-        String groupName = (String) request.get("groupName");
-        String groupDescription = (String) request.get("groupDescription");
+    public Result<ApiGroupVO> createGroup(@RequestBody ApiGroupCreateRequest request, HttpServletRequest httpRequest) {
+        validateApiGroupCreateRequest(request);
         String operator = authService.getUsernameByToken(TokenUtil.getTokenFromCookie(httpRequest));
-        ApiGroupIDTO group = apiGroupApplicationService.createGroup(groupNo, groupName, groupDescription, operator);
-        return Result.success(group);
+        ApiGroupCreateParam param = ApiGroupConverter.INSTANCE.toCreateParam(request, operator);
+        ApiGroupDTO group = apiGroupApplicationService.createGroup(param);
+        return Result.success(ApiGroupConverter.INSTANCE.toVO(group));
     }
 
+
     @PutMapping("/update")
-    public Result<ApiGroupIDTO> updateGroup(@RequestBody Map<String, Object> request, HttpServletRequest httpRequest) {
-        String groupNo = (String) request.get("groupNo");
-        String groupName = (String) request.get("groupName");
-        String groupDescription = (String) request.get("groupDescription");
+    public Result<ApiGroupVO> updateGroup(@RequestBody ApiGroupUpdateRequest request, HttpServletRequest httpRequest) {
+        validateApiGroupUpdateRequest(request);
         String operator = authService.getUsernameByToken(TokenUtil.getTokenFromCookie(httpRequest));
-        ApiGroupIDTO group = apiGroupApplicationService.updateGroup(groupNo, groupName, groupDescription, operator);
-        return Result.success(group);
+        ApiGroupUpdateParam param = ApiGroupConverter.INSTANCE.toUpdateParam(request, operator);
+        ApiGroupDTO group = apiGroupApplicationService.updateGroup(param);
+        return Result.success(ApiGroupConverter.INSTANCE.toVO(group));
     }
 
     @GetMapping("/{groupNo}")
-    public Result<ApiGroupIDTO> getGroup(@PathVariable String groupNo) {
-        ApiGroupIDTO group = apiGroupApplicationService.getGroup(groupNo);
-        return Result.success(group);
+    public Result<ApiGroupVO> getGroup(@PathVariable String groupNo) {
+        if (StringUtils.isBlank(groupNo)) {
+            throw new BusinessException(ErrorCode.PARAM_IS_EMPTY);
+        }
+        ApiGroupGetParam param = ApiGroupGetParam.builder().groupNo(groupNo).build();
+        ApiGroupDTO group = apiGroupApplicationService.getGroup(param);
+        return Result.success(ApiGroupConverter.INSTANCE.toVO(group));
     }
 
-    @GetMapping("/list")
-    public Result<List<ApiGroupIDTO>> listGroups(@RequestParam(required = false) String groupNo,
-                                                  @RequestParam(required = false) String groupName) {
-        List<ApiGroupIDTO> groups = apiGroupApplicationService.listGroups(groupNo, groupName);
-        return Result.success(groups);
+    @PostMapping("/page")
+    public Result<PageResult<ApiGroupVO>> page(@RequestBody ApiGroupPageRequest request) {
+        validateApiGroupPageRequest(request);
+        ApiGroupPageParam pageParam = ApiGroupConverter.INSTANCE.apiGroupPageRequest2ApiGroupPageParam(request);
+        PageResult<ApiGroupDTO> pageResult = apiGroupApplicationService.pageGroups(pageParam);
+        return Result.success(ApiGroupConverter.INSTANCE.apiGroupDTOPage2VO(pageResult));
     }
+
 
     @DeleteMapping("/{groupNo}")
     public Result<String> deleteGroup(@PathVariable String groupNo, HttpServletRequest httpRequest) {
+        if (StringUtils.isBlank(groupNo)) {
+            throw new BusinessException(ErrorCode.PARAM_IS_EMPTY);
+        }
         String operator = authService.getUsernameByToken(TokenUtil.getTokenFromCookie(httpRequest));
-        apiGroupApplicationService.deleteGroup(groupNo, operator);
+        ApiGroupDeleteParam param = ApiGroupDeleteParam.builder()
+                .groupNo(groupNo)
+                .operator(operator)
+                .build();
+        apiGroupApplicationService.deleteGroup(param);
         return Result.success("删除成功");
     }
+
+    private void validateApiGroupPageRequest(ApiGroupPageRequest request) {
+        if (ObjectUtils.isEmpty(request)) {
+            throw new BusinessException(ErrorCode.PARAM_IS_EMPTY);
+        }
+        request.validateBasePageParam();
+    }
+
+    private void validateApiGroupCreateRequest(ApiGroupCreateRequest request) {
+        if (ObjectUtils.isEmpty(request)) {
+            throw new BusinessException(ErrorCode.PARAM_IS_EMPTY);
+        }
+        request.validate();
+    }
+
+    private void validateApiGroupUpdateRequest(ApiGroupUpdateRequest request) {
+        if (ObjectUtils.isEmpty(request)) {
+            throw new BusinessException(ErrorCode.PARAM_IS_EMPTY);
+        }
+        request.validate();
+    }
+
 }

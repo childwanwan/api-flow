@@ -145,7 +145,8 @@ DROP TABLE IF EXISTS api_group;
 CREATE TABLE api_group (
     id                      BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键ID',
 
-    group_no                VARCHAR(64) NOT NULL COMMENT '分组编号，唯一标识',
+    group_no                VARCHAR(64) NOT NULL COMMENT '分组编号，内部不可变ID，用于连表',
+    group_code              VARCHAR(64) NOT NULL COMMENT '分组编码，业务编码，可编辑',
     group_name              VARCHAR(128) NOT NULL COMMENT '分组名称',
     group_description       VARCHAR(512) COMMENT '分组描述',
 

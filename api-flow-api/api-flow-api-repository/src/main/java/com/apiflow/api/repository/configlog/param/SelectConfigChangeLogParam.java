@@ -1,5 +1,6 @@
 package com.apiflow.api.repository.configlog.param;
 
+import com.apiflow.common.repository.ConditionNode;
 import com.apiflow.common.repository.FieldCondition;
 import com.apiflow.common.repository.QueryCondition;
 import lombok.AllArgsConstructor;
@@ -21,4 +22,5 @@ public class SelectConfigChangeLogParam {
     private Integer offset;
     private List<ConfigChangeLogField> selectFields;
     private List<QueryCondition<ConfigChangeLogField>> conditions;
+    private ConditionNode condition;
 }

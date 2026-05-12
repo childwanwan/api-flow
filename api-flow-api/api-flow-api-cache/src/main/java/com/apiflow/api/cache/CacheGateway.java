@@ -2,7 +2,7 @@ package com.apiflow.api.cache;
 
 import java.util.concurrent.TimeUnit;
 
-public interface CacheService {
+public interface CacheGateway {
 
     void set(String key, Object value, long expireTime, TimeUnit timeUnit);
 
@@ -13,4 +13,6 @@ public interface CacheService {
     boolean hasKey(String key);
 
     boolean expire(String key, long expireTime, TimeUnit timeUnit);
+
+    Boolean setIfAbsent(String key, Object value, long expireTime, TimeUnit timeUnit);
 }

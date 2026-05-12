@@ -1,15 +1,15 @@
 package com.apiflow.infrastructure.cache;
 
-import com.apiflow.api.cache.CacheService;
+import com.apiflow.api.cache.CacheGateway;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.StringRedisTemplate;
-import org.springframework.stereotype.Service;
+import org.springframework.stereotype.Component;
 
 import java.util.concurrent.TimeUnit;
 
-@Service
+@Component
 @RequiredArgsConstructor
-public class RedisCacheService implements CacheService {
+public class RedisCacheGateway implements CacheGateway {
 
     private final StringRedisTemplate redisTemplate;
 
@@ -36,5 +36,10 @@ public class RedisCacheService implements CacheService {
     @Override
     public boolean expire(String key, long expireTime, TimeUnit timeUnit) {
         return Boolean.TRUE.equals(redisTemplate.expire(key, expireTime, timeUnit));
+    }
+
+    @Override
+    public Boolean setIfAbsent(String key, Object value, long expireTime, TimeUnit timeUnit) {
+        return redisTemplate.opsForValue().setIfAbsent(key, String.valueOf(value), expireTime, timeUnit);
     }
 }

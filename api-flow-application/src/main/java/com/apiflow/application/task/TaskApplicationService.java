@@ -20,6 +20,7 @@ import com.apiflow.domain.config.model.PluginChainItem;
 import com.apiflow.domain.config.model.PluginConfig;
 import com.apiflow.domain.plugin.PluginChainExecutor;
 import com.apiflow.domain.plugin.PluginContext;
+import com.apiflow.domain.scheduler.TaskWakeUpSignal;
 import com.apiflow.domain.scheduler.TaskChangeEvent;
 import com.apiflow.domain.task.model.ExecInfo;
 import com.apiflow.domain.task.model.ReceiptConfig;
@@ -43,6 +44,7 @@ public class TaskApplicationService {
     private final TaskRepository taskRepository;
     private final PluginChainExecutor pluginChainExecutor;
     private final ApplicationEventPublisher eventPublisher;
+    private final TaskWakeUpSignal taskWakeUpSignal;
     private static final ApiConfigConverter API_CONFIG_CONVERTER = ApiConfigConverter.INSTANCE;
 
     public TaskDTO submitTask(TaskSubmitCommand command) {
@@ -79,6 +81,7 @@ public class TaskApplicationService {
         }
 
         eventPublisher.publishEvent(TaskChangeEvent.submitted(this, task.getTaskNo()));
+        taskWakeUpSignal.setSignal();
 
         return toDTO(task);
     }
@@ -112,7 +115,8 @@ public class TaskApplicationService {
                 task.getApiCode(),
                 task.getApiName(),
                 params,
-                customData
+                customData,
+                config != null ? config.getExtraConfig() : null
         );
 
         List<PluginChainExecutor.PluginChainItemConfig> chainItems = buildChainItems(config);
@@ -163,6 +167,7 @@ public class TaskApplicationService {
     public TaskDTO retryTask(TaskRetryCommand command) {
         TaskDO task = taskDomainService.retryTask(command.getTaskNo());
         eventPublisher.publishEvent(TaskChangeEvent.retried(this, task.getTaskNo()));
+        taskWakeUpSignal.setSignal();
         return toDTO(task);
     }
 

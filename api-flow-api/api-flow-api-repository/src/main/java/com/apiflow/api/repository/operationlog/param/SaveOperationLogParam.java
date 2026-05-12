@@ -10,10 +10,10 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class SaveOperationLogParam {
-    private String username;
-    private String operation;
-    private String module;
-    private String detail;
-    private String ip;
+    private String bizCode;
+    private String logType;
+    private String logData;
+    private String operator;
+    private Long operateTimeMs;
     private Long createTimeMs;
 }

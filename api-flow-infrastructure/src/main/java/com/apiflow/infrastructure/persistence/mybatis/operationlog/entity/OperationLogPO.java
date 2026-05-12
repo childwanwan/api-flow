@@ -1,6 +1,9 @@
 package com.apiflow.infrastructure.persistence.mybatis.operationlog.entity;
 
-import com.baomidou.mybatisplus.annotation.*;
+import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
+import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -16,20 +19,20 @@ public class OperationLogPO {
     @TableId(type = IdType.AUTO)
     private Long id;
 
-    @TableField("username")
-    private String username;
+    @TableField("biz_code")
+    private String bizCode;
 
-    @TableField("operation")
-    private String operation;
+    @TableField("log_type")
+    private String logType;
 
-    @TableField("module")
-    private String module;
+    @TableField("log_data")
+    private String logData;
 
-    @TableField("detail")
-    private String detail;
+    @TableField("operator")
+    private String operator;
 
-    @TableField("ip")
-    private String ip;
+    @TableField("operate_time_ms")
+    private Long operateTimeMs;
 
     @TableField("create_time_ms")
     private Long createTimeMs;

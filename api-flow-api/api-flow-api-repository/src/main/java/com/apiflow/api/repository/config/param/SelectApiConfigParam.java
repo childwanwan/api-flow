@@ -1,5 +1,6 @@
 package com.apiflow.api.repository.config.param;
 
+import com.apiflow.common.repository.ConditionNode;
 import com.apiflow.common.repository.FieldCondition;
 import com.apiflow.common.repository.QueryCondition;
 import lombok.AllArgsConstructor;
@@ -27,4 +28,5 @@ public class SelectApiConfigParam {
     private FieldCondition<Long> rateLimitConfigTimeWindowMs;
     private List<ApiConfigField> selectFields;
     private List<QueryCondition<ApiConfigField>> conditions;
+    private ConditionNode condition;
 }

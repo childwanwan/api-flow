@@ -10,6 +10,7 @@ import com.apiflow.common.exception.BusinessException;
 import com.apiflow.common.exception.ErrorCode;
 import com.apiflow.domain.config.converter.ApiConfigConverter;
 import com.apiflow.domain.config.model.ApiConfigDO;
+import com.apiflow.domain.config.model.ExtraConfig;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -22,7 +23,7 @@ public class ApiConfigDomainService {
 
     public ApiConfigDO createConfig(String groupNo, String apiCode, String apiName, String apiDescription,
                                     Long requestTimeoutMs, Integer autoRetryCount, Long retryIntervalMs,
-                                    Integer maxQueueSize,
+                                    Integer maxQueueSize, ExtraConfig extraConfig,
                                     String operator) {
         SelectOneApiConfigParam param = SelectOneApiConfigParam.builder()
                 .apiCode(FieldCondition.of(apiCode)).build();
@@ -42,6 +43,7 @@ public class ApiConfigDomainService {
                 .autoRetryCount(autoRetryCount == null ? SystemConstant.DEFAULT_AUTO_RETRY_COUNT : autoRetryCount)
                 .retryIntervalMs(retryIntervalMs == null ? SystemConstant.DEFAULT_RETRY_INTERVAL_MS : retryIntervalMs)
                 .maxQueueSize(maxQueueSize == null ? SystemConstant.DEFAULT_MAX_QUEUE_SIZE : maxQueueSize)
+                .extraConfig(extraConfig)
                 .createTimeMs(now)
                 .updateTimeMs(now)
                 .createOperator(operator)
@@ -56,7 +58,7 @@ public class ApiConfigDomainService {
 
     public ApiConfigDO updateConfig(String apiCode, String apiName, String apiDescription,
                                     Long requestTimeoutMs, Integer autoRetryCount, Long retryIntervalMs,
-                                    Integer maxQueueSize,
+                                    Integer maxQueueSize, ExtraConfig extraConfig,
                                     String operator) {
         SelectOneApiConfigParam param = SelectOneApiConfigParam.builder()
                 .apiCode(FieldCondition.of(apiCode)).build();
@@ -84,6 +86,9 @@ public class ApiConfigDomainService {
         }
         if (maxQueueSize != null) {
             config.setMaxQueueSize(maxQueueSize);
+        }
+        if (extraConfig != null) {
+            config.setExtraConfig(extraConfig);
         }
         config.setUpdateOperator(operator);
         config.setUpdateTimeMs(System.currentTimeMillis());

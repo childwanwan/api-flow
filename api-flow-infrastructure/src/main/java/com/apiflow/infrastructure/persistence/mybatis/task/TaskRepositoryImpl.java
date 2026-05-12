@@ -14,6 +14,8 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import static com.apiflow.infrastructure.persistence.mybatis.util.QueryConditionHelper.createFieldResolver;
+
 @Repository
 @RequiredArgsConstructor
 public class TaskRepositoryImpl implements TaskRepository {
@@ -41,11 +43,13 @@ public class TaskRepositoryImpl implements TaskRepository {
             QueryConditionHelper.applySelectFields(wrapper, param.getSelectFields());
             applyConditions(wrapper, param);
             QueryConditionHelper.applyConditions(wrapper, param.getConditions());
+            QueryConditionHelper.applyConditionNode(wrapper, param.getCondition(), createFieldResolver(TaskField.values()));
             TaskPO taskDO = taskMapper.selectOne(wrapper);
             return taskDO == null ? null : TaskConverter.INSTANCE.taskEntityPOToTaskIDTO(taskDO);
         }
         LambdaQueryWrapper<TaskPO> wrapper = buildLambdaQueryWrapper(param);
         QueryConditionHelper.applyConditions(wrapper, param.getConditions());
+        QueryConditionHelper.applyConditionNode(wrapper, param.getCondition(), createFieldResolver(TaskField.values()));
         TaskPO taskDO = taskMapper.selectOne(wrapper);
         return taskDO == null ? null : TaskConverter.INSTANCE.taskEntityPOToTaskIDTO(taskDO);
     }
@@ -57,6 +61,7 @@ public class TaskRepositoryImpl implements TaskRepository {
             QueryConditionHelper.applySelectFields(wrapper, param.getSelectFields());
             applyConditions(wrapper, param);
             QueryConditionHelper.applyConditions(wrapper, param.getConditions());
+            QueryConditionHelper.applyConditionNode(wrapper, param.getCondition(), createFieldResolver(TaskField.values()));
             if (param.getLimit() != null) {
                 wrapper.last(param.getLimit() > 0, "LIMIT " + param.getLimit());
             }
@@ -67,6 +72,7 @@ public class TaskRepositoryImpl implements TaskRepository {
         }
         LambdaQueryWrapper<TaskPO> wrapper = buildLambdaQueryWrapper(param);
         QueryConditionHelper.applyConditions(wrapper, param.getConditions());
+        QueryConditionHelper.applyConditionNode(wrapper, param.getCondition(), createFieldResolver(TaskField.values()));
         if (param.getLimit() != null) {
             wrapper.last(param.getLimit() > 0, "LIMIT " + param.getLimit());
         }

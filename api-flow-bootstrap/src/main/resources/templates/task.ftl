@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>任务管理</title>
     <link rel="stylesheet" href="${request.contextPath}/static/css/common.css">
+    <script src="${request.contextPath}/static/js/pagination.js"></script>
 </head>
 <body class="iframe-body">
 <div class="iframe-content">
@@ -34,7 +35,7 @@
             </tr></thead>
             <tbody id="taskTableBody"><tr><td colspan="7" class="empty-row">暂无任务数据</td></tr></tbody>
         </table>
-        <div style="padding:0 16px;"><div class="pagination"><span class="pagination-total" id="paginationTotal">共 0 条</span><div class="pagination-controls" id="paginationControls"></div><div class="pagination-size">每页<select id="pageSize" onchange="loadTasks()"><option value="20" selected>20</option><option value="50">50</option><option value="100">100</option></select>条</div></div></div>
+        <div style="padding:0 16px;"><div class="pagination-wrap" id="taskPagination"></div></div>
     </div>
 </div>
 
@@ -49,6 +50,14 @@
 var contextPath = '${request.contextPath}';
 if(window.top!==window.self){}else{window.top.location.href=contextPath+'/index?page=task';}
 var BASE = contextPath + '/api/v1/task';
+
+var taskPagination = new Pagination({
+    el: 'taskPagination',
+    total: 0,
+    pageSize: 20,
+    pageSizes: [10, 20, 30, 50, 100, 200],
+    mode: 'simple'
+});
 
 function toggleAll(cb) { document.querySelectorAll('.row-checkbox').forEach(function(c){c.checked=cb.checked;}); }
 function formatTime(ms) { if(!ms) return '-'; var d=new Date(ms); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')+':'+String(d.getSeconds()).padStart(2,'0'); }
@@ -88,7 +97,7 @@ function loadTasks() {
     if(compensate) params.append('compensateStatus',compensate);
     if(apiCode) params.append('apiCode',apiCode);
     params.append('page',1);
-    params.append('size',document.getElementById('pageSize').value);
+    params.append('size', taskPagination.getState().pageSize);
     fetch(BASE+'/list?'+params.toString()).then(function(r){return r.json();}).then(function(res){
         if(res.success) renderTasks(res.data||[]);
     });
@@ -96,7 +105,7 @@ function loadTasks() {
 
 function renderTasks(tasks) {
     var tbody=document.getElementById('taskTableBody');
-    if(!tasks||!tasks.length){tbody.innerHTML='<tr><td colspan="7" class="empty-row">暂无任务数据</td></tr>';document.getElementById('paginationTotal').textContent='共 0 条';return;}
+    if(!tasks||!tasks.length){tbody.innerHTML='<tr><td colspan="7" class="empty-row">暂无任务数据</td></tr>';taskPagination.update(0);return;}
     tbody.innerHTML=tasks.map(function(t){
         var moreActions='';
         if(t.status==='PENDING'||t.status==='RUNNING') moreActions+='<button class="dropdown-item" onclick="cancelTask(\''+t.taskNo+'\')">取消任务</button>';
@@ -114,10 +123,26 @@ function renderTasks(tasks) {
                 (moreActions?'<span class="action-divider">|</span><span class="dropdown" id="more_'+t.taskNo+'"><button class="btn-text" onclick="toggleDropdown(\''+t.taskNo+'\')">更多▼</button><div class="dropdown-menu">'+moreActions+'</div></span>':'')+
             '</td></tr>';
     }).join('');
-    document.getElementById('paginationTotal').textContent='共 '+tasks.length+' 条';
+    taskPagination.update(tasks.length);
 }
 
-function toggleDropdown(taskNo) { var el=document.getElementById('more_'+taskNo); el.classList.toggle('open'); setTimeout(function(){document.addEventListener('click',function close(ev){if(!el.contains(ev.target)){el.classList.remove('open');document.removeEventListener('click',close);}});},0); }
+function toggleDropdown(taskNo) {
+    var el = document.getElementById('more_'+taskNo);
+    if (!el) return;
+    var isOpen = el.classList.contains('open');
+    document.querySelectorAll('.dropdown.open').forEach(function(d){ d.classList.remove('open'); });
+    if (!isOpen) el.classList.add('open');
+}
+
+document.addEventListener('click', function(e) {
+    var inside = false;
+    document.querySelectorAll('.dropdown.open').forEach(function(d) {
+        if (d.contains(e.target)) inside = true;
+    });
+    if (!inside) {
+        document.querySelectorAll('.dropdown.open').forEach(function(d){ d.classList.remove('open'); });
+    }
+});
 
 function searchTasks() { loadTasks(); }
 function resetSearch() { document.getElementById('searchTaskNo').value=''; document.getElementById('searchGroupNo').value=''; document.getElementById('searchStatus').value=''; document.getElementById('searchSource').value=''; document.getElementById('searchCompensate').value=''; document.getElementById('searchApiCode').value=''; loadTasks(); }

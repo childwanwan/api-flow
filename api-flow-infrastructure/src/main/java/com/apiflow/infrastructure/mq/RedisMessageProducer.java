@@ -3,6 +3,7 @@ package com.apiflow.infrastructure.mq;
 import com.apiflow.api.mq.MessageProducer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
@@ -11,6 +12,7 @@ import java.util.Map;
 @Slf4j
 @Service
 @RequiredArgsConstructor
+@ConditionalOnProperty(name = "api-flow.mq.type", havingValue = "redis", matchIfMissing = true)
 public class RedisMessageProducer implements MessageProducer {
 
     private final StringRedisTemplate redisTemplate;

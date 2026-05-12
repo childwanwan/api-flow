@@ -3,13 +3,17 @@ package com.apiflow.infrastructure.persistence.mybatis.util;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
+import com.apiflow.common.repository.ConditionNode;
 import com.apiflow.common.repository.FieldCondition;
 import com.apiflow.common.repository.FieldMetadata;
+import com.apiflow.common.repository.LogicType;
 import com.apiflow.common.repository.MatchType;
 import com.apiflow.common.repository.QueryCondition;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -42,6 +46,12 @@ public class QueryConditionHelper {
         }
         if (condition.getLike() != null) {
             wrapper.like(column, condition.getLike());
+        }
+        if (condition.getLikeLeft() != null) {
+            wrapper.likeLeft(column, condition.getLikeLeft());
+        }
+        if (condition.getLikeRight() != null) {
+            wrapper.likeRight(column, condition.getLikeRight());
         }
         if (condition.getIn() != null && !condition.getIn().isEmpty()) {
             wrapper.in(column, condition.getIn());
@@ -88,6 +98,12 @@ public class QueryConditionHelper {
         if (condition.getLike() != null) {
             wrapper.like(column, condition.getLike());
         }
+        if (condition.getLikeLeft() != null) {
+            wrapper.likeLeft(column, condition.getLikeLeft());
+        }
+        if (condition.getLikeRight() != null) {
+            wrapper.likeRight(column, condition.getLikeRight());
+        }
         if (condition.getIn() != null && !condition.getIn().isEmpty()) {
             wrapper.in(column, condition.getIn());
         }
@@ -110,7 +126,7 @@ public class QueryConditionHelper {
             String jsonColumn,
             String jsonPath,
             FieldCondition<V> condition) {
-        applyJsonFieldConditionImpl(wrapper, jsonColumn, jsonPath, condition);
+        applyColumnSqlFieldCondition(wrapper, jsonColumn, jsonPath, condition);
     }
 
     public static <V> void applyJsonFieldCondition(
@@ -118,10 +134,10 @@ public class QueryConditionHelper {
             String jsonColumn,
             String jsonPath,
             FieldCondition<V> condition) {
-        applyJsonFieldConditionImpl(wrapper, jsonColumn, jsonPath, condition);
+        applyColumnSqlFieldCondition(wrapper, jsonColumn, jsonPath, condition);
     }
 
-    private static <V> void applyJsonFieldConditionImpl(
+    private static <V> void applyColumnSqlFieldCondition(
             com.baomidou.mybatisplus.core.conditions.AbstractWrapper<?, ?, ?> wrapper,
             String jsonColumn,
             String jsonPath,
@@ -130,6 +146,13 @@ public class QueryConditionHelper {
             return;
         }
         String columnSql = String.format("JSON_UNQUOTE(JSON_EXTRACT(%s, '$.%s'))", jsonColumn, jsonPath);
+        applyColumnSqlCondition(wrapper, columnSql, condition);
+    }
+
+    private static void applyColumnSqlCondition(
+            com.baomidou.mybatisplus.core.conditions.AbstractWrapper<?, ?, ?> wrapper,
+            String columnSql,
+            FieldCondition<?> condition) {
         if (condition.getEq() != null) {
             wrapper.apply(columnSql + " = {0}", condition.getEq());
         }
@@ -150,6 +173,12 @@ public class QueryConditionHelper {
         }
         if (condition.getLike() != null) {
             wrapper.apply(columnSql + " LIKE {0}", "%" + condition.getLike() + "%");
+        }
+        if (condition.getLikeLeft() != null) {
+            wrapper.apply(columnSql + " LIKE {0}", "%" + condition.getLikeLeft());
+        }
+        if (condition.getLikeRight() != null) {
+            wrapper.apply(columnSql + " LIKE {0}", condition.getLikeRight() + "%");
         }
         if (condition.getIn() != null && !condition.getIn().isEmpty()) {
             String placeholders = IntStream.range(0, condition.getIn().size())
@@ -222,6 +251,12 @@ public class QueryConditionHelper {
             case LIKE:
                 wrapper.apply(columnSql + " LIKE {0}", "%" + condition.getValue() + "%");
                 break;
+            case LIKE_LEFT:
+                wrapper.apply(columnSql + " LIKE {0}", "%" + condition.getValue());
+                break;
+            case LIKE_RIGHT:
+                wrapper.apply(columnSql + " LIKE {0}", condition.getValue() + "%");
+                break;
             case IN:
                 if (condition.getValues() != null && !condition.getValues().isEmpty()) {
                     String placeholders = IntStream.range(0, condition.getValues().size())
@@ -250,6 +285,132 @@ public class QueryConditionHelper {
             default:
                 break;
         }
+    }
+
+    public static void applyConditionNode(
+            QueryWrapper<?> wrapper,
+            ConditionNode node,
+            Function<String, String> fieldResolver) {
+        applyConditionNodeImpl(wrapper, node, fieldResolver);
+    }
+
+    public static void applyConditionNode(
+            LambdaQueryWrapper<?> wrapper,
+            ConditionNode node,
+            Function<String, String> fieldResolver) {
+        applyConditionNodeImpl(wrapper, node, fieldResolver);
+    }
+
+    public static <F extends Enum<F> & FieldMetadata> void applyConditionNode(
+            com.baomidou.mybatisplus.core.conditions.AbstractWrapper<?, ?, ?> wrapper,
+            ConditionNode node,
+            F[] fieldEnums) {
+        applyConditionNodeImpl(wrapper, node, createFieldResolver(fieldEnums));
+    }
+
+    public static Function<String, String> createFieldResolver(FieldMetadata[] fieldEnums) {
+        var fieldMap = Arrays.stream(fieldEnums)
+                .collect(Collectors.toMap(FieldMetadata::getFieldName, f -> f, (a, b) -> a));
+        return fieldName -> {
+            FieldMetadata meta = fieldMap.get(fieldName);
+            if (meta == null) {
+                return camelToSnake(fieldName);
+            }
+            return resolveColumnSql(meta);
+        };
+    }
+
+    public static Function<String, String> createSimpleFieldResolver() {
+        return fieldName -> camelToSnake(fieldName);
+    }
+
+    private static String camelToSnake(String fieldName) {
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < fieldName.length(); i++) {
+            char c = fieldName.charAt(i);
+            if (Character.isUpperCase(c)) {
+                sb.append('_').append(Character.toLowerCase(c));
+            } else {
+                sb.append(c);
+            }
+        }
+        return sb.toString();
+    }
+
+    private static void applyConditionNodeImpl(
+            com.baomidou.mybatisplus.core.conditions.AbstractWrapper<?, ?, ?> wrapper,
+            ConditionNode node,
+            Function<String, String> fieldResolver) {
+        if (node == null || node.isEmpty()) {
+            return;
+        }
+        if (node.isLeaf()) {
+            String columnSql = fieldResolver.apply(node.getField());
+            applyColumnSqlCondition(wrapper, columnSql, node.getFieldCondition());
+            return;
+        }
+        LogicType logicType = node.getLogicType();
+        if (logicType == null) {
+            return;
+        }
+        switch (logicType) {
+            case AND:
+                applyAndNode(wrapper, node, fieldResolver);
+                break;
+            case OR:
+                applyOrNode(wrapper, node, fieldResolver);
+                break;
+            case NOT:
+                applyNotNode(wrapper, node, fieldResolver);
+                break;
+        }
+    }
+
+    private static void applyAndNode(
+            com.baomidou.mybatisplus.core.conditions.AbstractWrapper<?, ?, ?> wrapper,
+            ConditionNode node,
+            Function<String, String> fieldResolver) {
+        if (node.getChildren() == null || node.getChildren().isEmpty()) {
+            return;
+        }
+        for (ConditionNode child : node.getChildren()) {
+            applyConditionNodeImpl(wrapper, child, fieldResolver);
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private static void applyOrNode(
+            com.baomidou.mybatisplus.core.conditions.AbstractWrapper<?, ?, ?> wrapper,
+            ConditionNode node,
+            Function<String, String> fieldResolver) {
+        if (node.getChildren() == null || node.getChildren().isEmpty()) {
+            return;
+        }
+        wrapper.and(w -> {
+            boolean first = true;
+            for (ConditionNode child : node.getChildren()) {
+                if (!first) {
+                    w.or();
+                }
+                applyConditionNodeImpl(w, child, fieldResolver);
+                first = false;
+            }
+        });
+    }
+
+    @SuppressWarnings("unchecked")
+    private static void applyNotNode(
+            com.baomidou.mybatisplus.core.conditions.AbstractWrapper<?, ?, ?> wrapper,
+            ConditionNode node,
+            Function<String, String> fieldResolver) {
+        if (node.getChildren() == null || node.getChildren().isEmpty()) {
+            return;
+        }
+        wrapper.not(w -> {
+            for (ConditionNode child : node.getChildren()) {
+                applyConditionNodeImpl(w, child, fieldResolver);
+            }
+        });
     }
 
     public static void applySelectFields(QueryWrapper<?> wrapper, List<? extends FieldMetadata> selectFields) {

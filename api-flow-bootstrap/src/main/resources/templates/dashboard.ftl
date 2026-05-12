@@ -84,7 +84,7 @@ if(window.top!==window.self){}else{window.top.location.href=contextPath+'/index?
 fetch(contextPath + '/api/v1/statistics/dashboard', {credentials: 'include'})
     .then(function(res) { return res.json(); })
     .then(function(res) {
-        if (res.code === 200 && res.data) {
+        if (res.success && res.data) {
             var d = res.data;
             document.getElementById('todayTotal').textContent = d.todayTotal || 0;
             document.getElementById('todayFailed').textContent = d.todayFailed || 0;

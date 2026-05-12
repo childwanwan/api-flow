@@ -90,7 +90,8 @@ CREATE TABLE api_task_log (
 DROP TABLE IF EXISTS api_group;
 CREATE TABLE api_group (
     id BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键ID',
-    group_no VARCHAR(64) NOT NULL COMMENT '分组编号',
+    group_no VARCHAR(64) NOT NULL COMMENT '分组编号（内部不可变ID，用于连表）',
+    group_code VARCHAR(64) NOT NULL COMMENT '分组编码（业务编码，可编辑）',
     group_name VARCHAR(128) NOT NULL COMMENT '分组名称',
     group_description VARCHAR(512) COMMENT '分组描述',
     create_time_ms BIGINT NOT NULL COMMENT '创建时间戳（毫秒）',
@@ -173,8 +174,8 @@ INSERT INTO sys_user (username, password, role, status, create_time_ms, update_t
 VALUES ('admin', '0192023a7bbd73250516f069df18b500', 'ADMIN', 'ENABLED', 1746153600000, 1746153600000, 'system');
 
 -- 初始API分组
-INSERT INTO api_group (group_no, group_name, group_description, create_time_ms, update_time_ms, create_operator)
-VALUES ('DEFAULT', '默认分组', '系统默认分组', 1746153600000, 1746153600000, 'system');
+INSERT INTO api_group (group_no, group_code, group_name, group_description, create_time_ms, update_time_ms, create_operator)
+VALUES ('DEFAULT', 'DEFAULT', '默认分组', '系统默认分组', 1746153600000, 1746153600000, 'system');
 
 -- 初始插件配置
 INSERT INTO plugin_config (plugin_code, plugin_name, plugin_class, description, enabled, order_num, create_time_ms, update_time_ms)
@@ -185,3 +186,43 @@ VALUES ('RATE_LIMIT_CHECK', '限流检查插件', 'com.apiflow.domain.plugin.bui
 
 INSERT INTO plugin_config (plugin_code, plugin_name, plugin_class, description, enabled, order_num, create_time_ms, update_time_ms)
 VALUES ('BUSINESS_EXECUTOR', '业务执行插件', 'com.apiflow.domain.plugin.builtin.BusinessExecutorPlugin', '执行核心业务逻辑', 1, 3, 1746153600000, 1746153600000);
+
+-- 告警规则表
+DROP TABLE IF EXISTS sys_alarm_rule;
+CREATE TABLE sys_alarm_rule (
+    id BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+    rule_name VARCHAR(128) NOT NULL COMMENT '规则名称',
+    alarm_type VARCHAR(64) NOT NULL COMMENT '告警类型：TASK_FAILED/EXECUTE_TIMEOUT/COMPENSATE_FAILED/RATE_LIMIT_TRIGGERED/SYSTEM_ERROR/CONFIG_CHANGED',
+    trigger_condition VARCHAR(512) NOT NULL COMMENT '触发条件描述',
+    level VARCHAR(32) NOT NULL DEFAULT 'WARNING' COMMENT '告警级别：INFO/WARNING/ERROR/CRITICAL',
+    enabled TINYINT NOT NULL DEFAULT 1 COMMENT '是否启用：0-禁用，1-启用',
+    create_time_ms BIGINT NOT NULL COMMENT '创建时间戳（毫秒）',
+    update_time_ms BIGINT NOT NULL COMMENT '更新时间戳（毫秒）',
+    PRIMARY KEY (id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='告警规则表';
+
+-- 告警记录表
+DROP TABLE IF EXISTS sys_alarm_record;
+CREATE TABLE sys_alarm_record (
+    id BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+    event_type VARCHAR(64) NOT NULL COMMENT '事件类型',
+    level VARCHAR(32) NOT NULL COMMENT '告警级别',
+    message VARCHAR(512) COMMENT '告警消息',
+    detail JSON COMMENT '告警详情JSON',
+    task_no VARCHAR(64) COMMENT '关联任务编号',
+    api_code VARCHAR(64) COMMENT '关联API编码',
+    create_time_ms BIGINT NOT NULL COMMENT '创建时间戳（毫秒）',
+    PRIMARY KEY (id),
+    INDEX idx_alarm_record_event_type (event_type),
+    INDEX idx_alarm_record_create_time (create_time_ms)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='告警记录表';
+
+-- 初始告警规则
+INSERT INTO sys_alarm_rule (rule_name, alarm_type, trigger_condition, level, enabled, create_time_ms, update_time_ms)
+VALUES ('任务失败告警', 'TASK_FAILED', 'retry_count>=max_retry_count', 'WARNING', 1, 1746153600000, 1746153600000);
+INSERT INTO sys_alarm_rule (rule_name, alarm_type, trigger_condition, level, enabled, create_time_ms, update_time_ms)
+VALUES ('执行超时告警', 'EXECUTE_TIMEOUT', 'RUNNING>30分钟', 'WARNING', 1, 1746153600000, 1746153600000);
+INSERT INTO sys_alarm_rule (rule_name, alarm_type, trigger_condition, level, enabled, create_time_ms, update_time_ms)
+VALUES ('补偿失败告警', 'COMPENSATE_FAILED', 'compensate=FAILED', 'ERROR', 1, 1746153600000, 1746153600000);
+INSERT INTO sys_alarm_rule (rule_name, alarm_type, trigger_condition, level, enabled, create_time_ms, update_time_ms)
+VALUES ('限流触发告警', 'RATE_LIMIT_TRIGGERED', 'rate_limit_reject', 'INFO', 0, 1746153600000, 1746153600000);
