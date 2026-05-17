@@ -1,5 +1,6 @@
 package com.apiflow.api.repository.group.param;
 
+import cn.hutool.core.collection.CollectionUtil;
 import com.apiflow.common.repository.ConditionNode;
 import lombok.AllArgsConstructor;
 import lombok.Builder;

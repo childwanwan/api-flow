@@ -10,7 +10,8 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class ApiConfigPluginChainItemVO {
-    private String pluginName;
+    private String pluginCode;
+    private Boolean enabled;
     private Integer order;
     private String config;
 }

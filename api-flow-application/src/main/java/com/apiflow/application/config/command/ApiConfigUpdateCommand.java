@@ -7,8 +7,10 @@ import lombok.Data;
 @Builder
 public class ApiConfigUpdateCommand {
     private String apiCode;
+    private String groupNo;
     private String apiName;
     private String apiDescription;
+    private String status;
     private Long requestTimeoutMs;
     private Integer autoRetryCount;
     private Long retryIntervalMs;

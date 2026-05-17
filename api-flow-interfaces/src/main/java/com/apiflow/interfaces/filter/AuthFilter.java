@@ -37,8 +37,7 @@ public class AuthFilter extends OncePerRequestFilter {
                 path.equals(contextPath) ||
                 path.equals(contextPath + "/login") ||
                 path.equals(contextPath + "/auth/login") ||
-                path.equals(contextPath + "/logout") ||
-                path.equals(contextPath + "/index")) {
+                path.equals(contextPath + "/logout")) {
             filterChain.doFilter(request, response);
             return;
         }

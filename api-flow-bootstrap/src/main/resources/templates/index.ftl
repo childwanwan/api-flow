@@ -6,6 +6,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>API接口网关中台</title>
     <link rel="stylesheet" href="${request.contextPath}/static/css/common.css">
+    <link rel="stylesheet" href="${request.contextPath}/static/css/input-clear.css">
+    <script src="${request.contextPath}/static/js/input-clear.js"></script>
+    <script src="${request.contextPath}/static/js/common.js"></script>
 </head>
 <body>
 <div class="layout">
@@ -92,10 +95,16 @@ var sidebarCollapsed = false;
 function toggleSidebar() {
     sidebarCollapsed = !sidebarCollapsed;
     var sidebar = document.getElementById('sidebar');
+    var trigger = sidebar.querySelector('.sidebar-trigger');
+    var triggerText = trigger.querySelector('.trigger-text');
     if (sidebarCollapsed) {
         sidebar.classList.add('collapsed');
+        trigger.title = '打开菜单';
+        triggerText.textContent = '展开';
     } else {
         sidebar.classList.remove('collapsed');
+        trigger.title = '收起菜单';
+        triggerText.textContent = '收起';
     }
 }
 
@@ -112,11 +121,25 @@ document.addEventListener('click', function(e) {
     }
 });
 
+function expandSidebar() {
+    if (sidebarCollapsed) {
+        toggleSidebar();
+    }
+}
+
 function toggleSubmenu(el) {
+    if (sidebarCollapsed) {
+        expandSidebar();
+        el.parentElement.classList.add('open');
+        return;
+    }
     el.parentElement.classList.toggle('open');
 }
 
 function openTab(id, url, title, el) {
+    if (sidebarCollapsed) {
+        expandSidebar();
+    }
     document.getElementById('mainIframe').src = url;
     document.querySelectorAll('.sidebar-menu .menu-item').forEach(function(item) {
         item.classList.remove('active');

@@ -3,6 +3,10 @@ package com.apiflow.interfaces.biz.config.converter;
 import com.apiflow.application.config.command.ApiConfigCreateCommand;
 import com.apiflow.application.config.command.ApiConfigUpdateCommand;
 import com.apiflow.application.config.dto.*;
+import com.apiflow.application.task.dto.HttpReceiptDTO;
+import com.apiflow.application.task.dto.MqReceiptDTO;
+import com.apiflow.application.task.dto.ReceiptConfigDTO;
+import com.apiflow.application.task.dto.ReceiptRetryPolicyDTO;
 import com.apiflow.common.util.JsonUtil;
 import com.apiflow.interfaces.biz.config.request.ApiConfigCreateRequest;
 import com.apiflow.interfaces.biz.config.request.ApiConfigUpdateRequest;
@@ -22,7 +26,7 @@ public interface ApiConfigConverter {
     @Mapping(target = "filterRules", qualifiedByName = "requestToJson")
     @Mapping(target = "pluginConfig", qualifiedByName = "requestToJson")
     @Mapping(target = "extraConfig", qualifiedByName = "requestToJson")
-    @Mapping(target = "receiptConfig", ignore = true)
+    @Mapping(target = "receiptConfig", qualifiedByName = "requestToJson")
     ApiConfigCreateCommand toCreateCommand(ApiConfigCreateRequest request);
 
     @Named("toUpdateCommand")
@@ -30,7 +34,7 @@ public interface ApiConfigConverter {
     @Mapping(target = "filterRules", qualifiedByName = "requestToJson")
     @Mapping(target = "pluginConfig", qualifiedByName = "requestToJson")
     @Mapping(target = "extraConfig", qualifiedByName = "requestToJson")
-    @Mapping(target = "receiptConfig", ignore = true)
+    @Mapping(target = "receiptConfig", qualifiedByName = "requestToJson")
     ApiConfigUpdateCommand toUpdateCommand(ApiConfigUpdateRequest request);
 
     @Named("toVO")
@@ -38,6 +42,7 @@ public interface ApiConfigConverter {
     @Mapping(target = "filterRules", source = "filterRules")
     @Mapping(target = "pluginConfig", source = "pluginConfig")
     @Mapping(target = "extraConfig", source = "extraConfig")
+    @Mapping(target = "receiptConfig", source = "receiptConfig")
     ApiConfigVO toVO(ApiConfigDTO dto);
 
     ApiConfigRateLimitConfigVO toRateLimitConfigVO(RateLimitConfigDTO dto);
@@ -54,6 +59,14 @@ public interface ApiConfigConverter {
     ApiConfigPluginChainItemVO toPluginChainItemVO(PluginChainItemDTO dto);
 
     ApiConfigExtraConfigVO toExtraConfigVO(ExtraConfigDTO dto);
+
+    ApiConfigReceiptConfigVO toReceiptConfigVO(ReceiptConfigDTO dto);
+
+    ApiConfigReceiptConfigVO.HttpReceiptVO toHttpReceiptVO(HttpReceiptDTO dto);
+
+    ApiConfigReceiptConfigVO.MqReceiptVO toMqReceiptVO(MqReceiptDTO dto);
+
+    ApiConfigReceiptConfigVO.RetryPolicyVO toRetryPolicyVO(ReceiptRetryPolicyDTO dto);
 
     @Named("requestToJson")
     default String requestToJson(Object obj) {

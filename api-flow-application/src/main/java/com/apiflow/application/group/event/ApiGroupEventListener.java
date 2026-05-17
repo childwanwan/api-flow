@@ -4,7 +4,6 @@ import com.apiflow.api.mq.MessageProducer;
 import com.apiflow.domain.group.event.ApiGroupDomainEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 import tools.jackson.databind.ObjectMapper;
@@ -12,7 +11,6 @@ import tools.jackson.databind.ObjectMapper;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-@ConditionalOnProperty(name = "api-flow.mq.type", havingValue = "redis", matchIfMissing = true)
 public class ApiGroupEventListener {
 
     private static final String TOPIC = "api-group-event";
@@ -24,30 +22,33 @@ public class ApiGroupEventListener {
 
     @EventListener
     public void onGroupCreated(ApiGroupDomainEvent.Created event) {
-        groupEventHandler.handleCreated(toMessage(event));
-        sendToMQWithRetry(event);
+        GroupEventMessage msg = toMessage(event);
+        groupEventHandler.handleCreated(msg);
+        sendToMQWithRetry(msg);
     }
 
     @EventListener
     public void onGroupUpdated(ApiGroupDomainEvent.Updated event) {
-        groupEventHandler.handleUpdated(toMessage(event));
-        sendToMQWithRetry(event);
+        GroupEventMessage msg = toMessage(event);
+        groupEventHandler.handleUpdated(msg);
+        sendToMQWithRetry(msg);
     }
 
     @EventListener
     public void onGroupDeleted(ApiGroupDomainEvent.Deleted event) {
-        groupEventHandler.handleDeleted(toMessage(event));
-        sendToMQWithRetry(event);
+        GroupEventMessage msg = toMessage(event);
+        groupEventHandler.handleDeleted(msg);
+        sendToMQWithRetry(msg);
     }
 
     private GroupEventMessage toMessage(ApiGroupDomainEvent event) {
-        String oldGroupCode = null;
-        String oldGroupName = null;
-        String oldGroupDescription = null;
+        GroupEventMessage.Snapshot snapshot = null;
         if (event instanceof ApiGroupDomainEvent.Updated updated) {
-            oldGroupCode = updated.getOldGroupCode();
-            oldGroupName = updated.getOldGroupName();
-            oldGroupDescription = updated.getOldGroupDescription();
+            snapshot = new GroupEventMessage.Snapshot(
+                    updated.getOldGroupCode(),
+                    updated.getOldGroupName(),
+                    updated.getOldGroupDescription()
+            );
         }
         return new GroupEventMessage(
                 event.getEventId(),
@@ -59,14 +60,12 @@ public class ApiGroupEventListener {
                 event.getGroupName(),
                 event.getGroupDescription(),
                 event.getOperator(),
-                oldGroupCode,
-                oldGroupName,
-                oldGroupDescription
+                snapshot
         );
     }
 
-    private void sendToMQWithRetry(ApiGroupDomainEvent event) {
-        String json = serializeEvent(event);
+    private void sendToMQWithRetry(GroupEventMessage msg) {
+        String json = serializeMessage(msg);
         if (json == null) {
             return;
         }
@@ -75,27 +74,27 @@ public class ApiGroupEventListener {
             try {
                 messageProducer.send(TOPIC, json);
                 log.info("Sent group event to MQ: type={}, groupNo={}, attempt={}",
-                        event.getEventType(), event.getGroupNo(), attempt);
+                        msg.eventType(), msg.aggregateId(), attempt);
                 return;
             } catch (Exception e) {
                 log.warn("Failed to send group event to MQ: type={}, groupNo={}, attempt={}/{}",
-                        event.getEventType(), event.getGroupNo(), attempt, MAX_RETRY, e);
+                        msg.eventType(), msg.aggregateId(), attempt, MAX_RETRY, e);
                 if (attempt < MAX_RETRY) {
                     sleep(attempt);
                 }
             }
         }
 
-        log.error("[MQ_COMPENSATE_REQUIRED] All retries exhausted for event: type={}, groupNo={}, eventId={}, payload={}",
-                event.getEventType(), event.getGroupNo(), event.getEventId(), json);
+        log.error("[MQ_COMPENSATE_REQUIRED] All retries exhausted for event: type={}, aggregateId={}, eventId={}",
+                msg.eventType(), msg.aggregateId(), msg.eventId());
     }
 
-    private String serializeEvent(ApiGroupDomainEvent event) {
+    private String serializeMessage(GroupEventMessage msg) {
         try {
-            return objectMapper.writeValueAsString(event);
+            return objectMapper.writeValueAsString(msg);
         } catch (Exception e) {
-            log.error("Failed to serialize event: type={}, groupNo={}, eventId={}",
-                    event.getEventType(), event.getGroupNo(), event.getEventId(), e);
+            log.error("Failed to serialize event message: type={}, aggregateId={}, eventId={}",
+                    msg.eventType(), msg.aggregateId(), msg.eventId(), e);
             return null;
         }
     }

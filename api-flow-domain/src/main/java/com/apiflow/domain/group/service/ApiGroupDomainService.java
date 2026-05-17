@@ -13,7 +13,6 @@ import com.apiflow.domain.group.command.UpdateApiGroupCommand;
 import com.apiflow.domain.group.converter.ApiGroupConverter;
 import com.apiflow.domain.group.model.ApiGroup;
 import lombok.RequiredArgsConstructor;
-import org.apache.commons.lang3.ObjectUtils;
 
 import java.util.List;
 
@@ -24,23 +23,33 @@ public class ApiGroupDomainService {
     private static final ApiGroupConverter CONVERTER = ApiGroupConverter.INSTANCE;
 
     public ApiGroup create(CreateApiGroupCommand command) {
-        checkGroupCodeUnique(command.getGroupCode(), null);
+        SelectOneApiGroupParam param = SelectOneApiGroupParam.builder()
+                .condition(ConditionNode.eq(ApiGroupField.GROUP_CODE.getFieldName(), command.getGroupCode()))
+                .selectFields(List.of(ApiGroupField.GROUP_NO))
+                .build();
+        if (apiGroupRepository.selectOne(param) != null) {
+            throw new BusinessException(ErrorCode.GROUP_CODE_EXIST);
+        }
 
-        ApiGroup group = ApiGroup.create(
+        return ApiGroup.create(
                 command.getGroupCode(),
                 command.getGroupName(),
                 command.getGroupDescription(),
                 command.getOperator()
         );
-        apiGroupRepository.save(CONVERTER.toSaveParam(group));
-        return group;
     }
 
     public ApiGroup update(UpdateApiGroupCommand command) {
-        ApiGroup group = getByGroupNo(command.getGroupNo());
+        ApiGroup group = getByGroupNo(command.getGroupNo(),
+                ApiGroupField.ID,
+                ApiGroupField.GROUP_NO,
+                ApiGroupField.GROUP_CODE,
+                ApiGroupField.GROUP_NAME,
+                ApiGroupField.GROUP_DESCRIPTION
+        );
 
         if (!group.isSameGroupCode(command.getGroupCode())) {
-            checkGroupCodeUnique(command.getGroupCode(), command.getGroupNo());
+            checkGroupCodeNotOccupied(command.getGroupCode(), command.getGroupNo());
         }
 
         group.update(
@@ -50,38 +59,38 @@ public class ApiGroupDomainService {
                 command.getOperator()
         );
 
-        apiGroupRepository.update(CONVERTER.toUpdateParam(group));
         return group;
     }
 
-    public ApiGroup getByGroupNo(String groupNo) {
+    public ApiGroup delete(DeleteApiGroupCommand command) {
+        ApiGroup group = getByGroupNo(command.getGroupNo(),
+                ApiGroupField.ID,
+                ApiGroupField.GROUP_NO
+        );
+        group.delete(command.getOperator());
+        return group;
+    }
+
+    private ApiGroup getByGroupNo(String groupNo, ApiGroupField... selectFields) {
         SelectOneApiGroupParam param = SelectOneApiGroupParam.builder()
                 .condition(ConditionNode.eq(ApiGroupField.GROUP_NO.getFieldName(), groupNo))
+                .selectFields(List.of(selectFields))
                 .build();
         ApiGroupIDTO dto = apiGroupRepository.selectOne(param);
-        if (ObjectUtils.isEmpty(dto)) {
+        if (dto == null) {
             throw new BusinessException(ErrorCode.DATA_NOT_EXIST);
         }
         return CONVERTER.toAggregate(dto);
     }
 
-    public ApiGroup delete(DeleteApiGroupCommand command) {
-        ApiGroup group = getByGroupNo(command.getGroupNo());
-        group.delete(command.getOperator());
-
-        apiGroupRepository.deleteList(List.of(group.getId()));
-        return group;
-    }
-
-    private void checkGroupCodeUnique(String groupCode, String excludeGroupNo) {
+    private void checkGroupCodeNotOccupied(String groupCode, String excludeGroupNo) {
         SelectOneApiGroupParam param = SelectOneApiGroupParam.builder()
                 .condition(ConditionNode.eq(ApiGroupField.GROUP_CODE.getFieldName(), groupCode))
+                .selectFields(List.of(ApiGroupField.GROUP_NO))
                 .build();
         ApiGroupIDTO existing = apiGroupRepository.selectOne(param);
-        if (ObjectUtils.isNotEmpty(existing)) {
-            if (excludeGroupNo == null || !excludeGroupNo.equals(existing.getGroupNo())) {
-                throw new BusinessException(ErrorCode.GROUP_CODE_EXIST);
-            }
+        if (existing != null && !existing.getGroupNo().equals(excludeGroupNo)) {
+            throw new BusinessException(ErrorCode.GROUP_CODE_EXIST);
         }
     }
 }

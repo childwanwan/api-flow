@@ -12,17 +12,18 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class ApiConfigFilterRuleRequest {
 
-    private String name;
-    private String type;
-    private String expression;
-    private Boolean enabled;
+    private String field;
+    private String operator;
+    private String value;
+    private String message;
 
     public void validate() {
-        ValidationHelper.validateNotBlank(name, "name");
-        ValidationHelper.validateSize(name, 64, "name");
-        ValidationHelper.validateNotBlank(type, "type");
-        ValidationHelper.validateSize(type, 32, "type");
-        ValidationHelper.validateNotBlank(expression, "expression");
-        ValidationHelper.validateSize(expression, 1024, "expression");
+        ValidationHelper.validateNotBlank(field, "field");
+        ValidationHelper.validateSize(field, 64, "field");
+        ValidationHelper.validateNotBlank(operator, "operator");
+        ValidationHelper.validateSize(operator, 32, "operator");
+        ValidationHelper.validateNotBlank(value, "value");
+        ValidationHelper.validateSize(value, 1024, "value");
+        ValidationHelper.validateSize(message, 512, "message");
     }
 }

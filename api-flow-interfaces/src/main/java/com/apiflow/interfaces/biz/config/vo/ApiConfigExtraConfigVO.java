@@ -12,10 +12,7 @@ import java.util.Map;
 @NoArgsConstructor
 @AllArgsConstructor
 public class ApiConfigExtraConfigVO {
-    private String region;
-    private String sellerId;
-    private String awsAccessKey;
-    private String environment;
+    private Map<String, String> envConfig;
     private String targetUrl;
     private String targetMethod;
     private Map<String, String> targetHeaders;

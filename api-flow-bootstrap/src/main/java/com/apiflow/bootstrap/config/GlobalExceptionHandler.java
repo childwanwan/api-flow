@@ -23,8 +23,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(BusinessException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public Result<?> handleBusinessException(BusinessException e) {
-        log.warn("Business exception: code={}, message={}, detail={}, traceId={}",
-                e.getErrorCode().getCode(), e.getErrorCode().getMessage(), e.getDetail(), TraceContext.getTraceId());
+        log.warn("Business exception: ", e);
         return Result.fail(e.getErrorCode(), e.getDetail());
     }
 

@@ -4,21 +4,17 @@ import com.apiflow.api.mq.MessageProducer;
 import com.apiflow.domain.task.model.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.*;
-import org.springframework.stereotype.Component;
-import org.springframework.web.client.RestTemplate;
 
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 @Slf4j
-@Component
 @RequiredArgsConstructor
 public class ReceiptService {
 
     private final MessageProducer messageProducer;
-    private final RestTemplate restTemplate;
+    private final HttpReceiptGateway httpReceiptGateway;
 
     public void sendReceipt(TaskDO task, ReceiptConfig receiptConfig) {
         if (receiptConfig == null || receiptConfig.getReceiptTypes() == null) {
@@ -48,25 +44,23 @@ public class ReceiptService {
 
             for (int attempt = 0; attempt <= maxRetries; attempt++) {
                 try {
-                    HttpHeaders headers = new HttpHeaders();
-                    headers.setContentType(MediaType.APPLICATION_JSON);
+                    Map<String, String> headers = new HashMap<>();
+                    headers.put("Content-Type", "application/json");
                     if (httpReceipt.getHeaders() != null) {
-                        httpReceipt.getHeaders().forEach(headers::add);
+                        headers.putAll(httpReceipt.getHeaders());
                     }
-                    headers.add("X-Request-Id", task.getTaskNo() + "-receipt-" + attempt);
+                    headers.put("X-Request-Id", task.getTaskNo() + "-receipt-" + attempt);
 
                     Map<String, Object> body = buildReceiptBody(task);
-                    HttpEntity<Map<String, Object>> entity = new HttpEntity<>(body, headers);
 
-                    long timeoutMs = httpReceipt.getTimeoutMs() != null ? httpReceipt.getTimeoutMs() : 30000;
-                    ResponseEntity<String> response = restTemplate.exchange(
+                    int statusCode = httpReceiptGateway.sendHttpRequest(
                             httpReceipt.getUrl(),
-                            HttpMethod.valueOf(httpReceipt.getMethod() != null ? httpReceipt.getMethod() : "POST"),
-                            entity,
-                            String.class
+                            httpReceipt.getMethod() != null ? httpReceipt.getMethod() : "POST",
+                            headers,
+                            body
                     );
 
-                    if (response.getStatusCode().is2xxSuccessful()) {
+                    if (statusCode >= 200 && statusCode < 300) {
                         log.info("HTTP receipt sent successfully for task: {}, attempt: {}", task.getTaskNo(), attempt);
                         return;
                     }

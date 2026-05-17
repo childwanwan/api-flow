@@ -23,6 +23,7 @@ public class ApiConfigVO {
     private Integer maxQueueSize;
     private ApiConfigFilterRulesVO filterRules;
     private ApiConfigPluginConfigVO pluginConfig;
+    private ApiConfigReceiptConfigVO receiptConfig;
     private ApiConfigExtraConfigVO extraConfig;
     private Long createTimeMs;
     private Long updateTimeMs;

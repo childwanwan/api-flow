@@ -24,8 +24,8 @@ public class SelectOneApiConfigParam {
     private FieldCondition<Integer> maxQueueSize;
     private FieldCondition<Long> createTimeMs;
     private FieldCondition<Long> updateTimeMs;
-    private FieldCondition<Integer> rateLimitConfigMaxRequests;
-    private FieldCondition<Long> rateLimitConfigTimeWindowMs;
+    private FieldCondition<Integer> rateLimitConfigLimit;
+    private FieldCondition<Integer> rateLimitConfigWindowSeconds;
     private List<ApiConfigField> selectFields;
     private List<QueryCondition<ApiConfigField>> conditions;
     private ConditionNode condition;

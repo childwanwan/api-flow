@@ -6,6 +6,9 @@
     <meta http-equiv="content-type" content="text/html;charset=utf-8">
     <title>API接口网关中台 - 登录</title>
     <link rel="stylesheet" href="${request.contextPath}/static/css/login.css">
+    <link rel="stylesheet" href="${request.contextPath}/static/css/input-clear.css">
+    <script src="${request.contextPath}/static/js/input-clear.js"></script>
+    <script src="${request.contextPath}/static/js/common.js"></script>
 </head>
 <body class="login-body">
     <div class="login-page">

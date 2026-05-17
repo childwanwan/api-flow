@@ -126,6 +126,8 @@ body.login-body::after {
 .login-input-box {
     position: relative;
     margin-bottom: 22px;
+    width: 100%;
+    overflow: visible;
 }
 
 .login-input-icon {
@@ -136,8 +138,9 @@ body.login-body::after {
     color: #909399;
     width: 20px;
     height: 20px;
-    z-index: 1;
+    z-index: 10;
     transition: color 0.3s ease;
+    pointer-events: none;
 }
 
 .login-input-box:focus-within .login-input-icon {
@@ -151,7 +154,7 @@ body.login-body::after {
 
 .login-input {
     width: 100%;
-    padding: 14px 16px 14px 48px;
+    padding: 14px 40px 14px 48px;
     border: 2px solid #E4E7ED;
     border-radius: 10px;
     font-size: 14px;
@@ -160,6 +163,8 @@ body.login-body::after {
     outline: none;
     color: #303133;
     background: #f8f9fb;
+    box-sizing: border-box;
+    display: block;
 }
 
 .login-input:hover {

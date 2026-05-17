@@ -1,8 +1,8 @@
 package com.apiflow.api.repository.group.param;
 
+import cn.hutool.core.collection.CollectionUtil;
+import cn.hutool.core.util.ObjectUtil;
 import com.apiflow.common.repository.ConditionNode;
-import com.apiflow.common.repository.FieldCondition;
-import com.apiflow.common.repository.QueryCondition;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -15,10 +15,15 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 public class SelectOneApiGroupParam {
-    private FieldCondition<String> groupNo;
-    private FieldCondition<String> groupCode;
-    private FieldCondition<String> groupName;
     private List<ApiGroupField> selectFields;
-    private List<QueryCondition<ApiGroupField>> conditions;
     private ConditionNode condition;
+
+
+    public boolean isEmpty() {
+        if (CollectionUtil.isEmpty(selectFields)
+                || ObjectUtil.isEmpty(condition)) {
+            return true;
+        }
+        return false;
+    }
 }

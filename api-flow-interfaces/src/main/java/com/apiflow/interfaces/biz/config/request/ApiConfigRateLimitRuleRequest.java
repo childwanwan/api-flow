@@ -13,15 +13,21 @@ import lombok.NoArgsConstructor;
 public class ApiConfigRateLimitRuleRequest {
 
     private String name;
-    private Long maxRequests;
-    private Long timeWindowMs;
+    private String type;
+    private String dimension;
+    private String keyTemplate;
+    private Integer limit;
+    private Integer windowSeconds;
 
     public void validate() {
         ValidationHelper.validateNotBlank(name, "name");
         ValidationHelper.validateSize(name, 64, "name");
-        ValidationHelper.validateNotNull(maxRequests, "maxRequests");
-        ValidationHelper.validateRange(maxRequests, 1L, 1000000L, "maxRequests");
-        ValidationHelper.validateNotNull(timeWindowMs, "timeWindowMs");
-        ValidationHelper.validateRange(timeWindowMs, 1000L, 3600000L, "timeWindowMs");
+        ValidationHelper.validateSize(type, 32, "type");
+        ValidationHelper.validateSize(dimension, 32, "dimension");
+        ValidationHelper.validateSize(keyTemplate, 256, "keyTemplate");
+        ValidationHelper.validateNotNull(limit, "limit");
+        ValidationHelper.validateRange(limit, 1, 1000000, "limit");
+        ValidationHelper.validateNotNull(windowSeconds, "windowSeconds");
+        ValidationHelper.validateRange(windowSeconds, 1, 3600, "windowSeconds");
     }
 }

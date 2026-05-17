@@ -1,5 +1,6 @@
 package com.apiflow.interfaces.biz.operationlog;
 
+import cn.hutool.core.util.ObjectUtil;
 import com.apiflow.application.operationlog.OperationLogService;
 import com.apiflow.application.operationlog.dto.OperationLogDTO;
 import com.apiflow.application.operationlog.param.OperationLogPageParam;
@@ -12,7 +13,6 @@ import com.apiflow.interfaces.biz.operationlog.request.OperationLogPageRequest;
 import com.apiflow.interfaces.biz.operationlog.vo.OperationLogVO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.ObjectUtils;
 import org.springframework.web.bind.annotation.*;
 
 @Slf4j
@@ -32,7 +32,7 @@ public class OperationLogController {
     }
 
     private void validateOperationLogPageRequest(OperationLogPageRequest request) {
-        if (ObjectUtils.isEmpty(request)) {
+        if (ObjectUtil.isEmpty(request)) {
             throw new BusinessException(ErrorCode.PARAM_IS_EMPTY);
         }
         request.validateBasePageParam();

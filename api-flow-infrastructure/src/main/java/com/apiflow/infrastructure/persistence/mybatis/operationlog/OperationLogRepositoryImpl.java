@@ -2,16 +2,13 @@ package com.apiflow.infrastructure.persistence.mybatis.operationlog;
 
 import com.apiflow.api.repository.operationlog.OperationLogRepository;
 import com.apiflow.api.repository.operationlog.idto.OperationLogIDTO;
-import com.apiflow.api.repository.operationlog.param.OrderBy;
-import com.apiflow.api.repository.operationlog.param.SaveOperationLogParam;
-import com.apiflow.api.repository.operationlog.param.SelectOperationLogParam;
-import com.apiflow.api.repository.operationlog.param.SelectPageOperationLogParam;
-import com.apiflow.api.repository.operationlog.param.OperationLogField;
+import com.apiflow.api.repository.operationlog.param.*;
+import com.apiflow.common.repository.ConditionNode;
 import com.apiflow.common.result.PageResult;
 import com.apiflow.infrastructure.persistence.mybatis.operationlog.converter.OperationLogConverter;
 import com.apiflow.infrastructure.persistence.mybatis.operationlog.entity.OperationLogPO;
 import com.apiflow.infrastructure.persistence.mybatis.util.QueryConditionHelper;
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.RequiredArgsConstructor;
@@ -38,15 +35,10 @@ public class OperationLogRepositoryImpl implements OperationLogRepository {
 
     @Override
     public List<OperationLogIDTO> selectList(SelectOperationLogParam param) {
-        LambdaQueryWrapper<OperationLogPO> wrapper = new LambdaQueryWrapper<>();
-        QueryConditionHelper.applyFieldCondition(wrapper, OperationLogPO::getBizCode, param.getBizCode());
-        QueryConditionHelper.applyFieldCondition(wrapper, OperationLogPO::getLogType, param.getLogType());
-        QueryConditionHelper.applyFieldCondition(wrapper, OperationLogPO::getOperator, param.getOperator());
-        QueryConditionHelper.applyFieldCondition(wrapper, OperationLogPO::getOperateTimeMs, param.getOperateTimeMs());
-        QueryConditionHelper.applyFieldCondition(wrapper, OperationLogPO::getCreateTimeMs, param.getCreateTimeMs());
-        QueryConditionHelper.applyConditions(wrapper, param.getConditions());
-        QueryConditionHelper.applyConditionNode(wrapper, param.getCondition(), createFieldResolver(OperationLogField.values()));
-        wrapper.orderByDesc(OperationLogPO::getCreateTimeMs);
+        QueryWrapper<OperationLogPO> wrapper = new QueryWrapper<>();
+        QueryConditionHelper.applySelectFields(wrapper, param.getSelectFields());
+        applyCondition(wrapper, param.getCondition());
+        wrapper.orderByDesc("create_time_ms");
         if (param.getLimit() != null) {
             wrapper.last("LIMIT " + param.getLimit());
         }
@@ -58,21 +50,16 @@ public class OperationLogRepositoryImpl implements OperationLogRepository {
 
     @Override
     public long count(SelectOperationLogParam param) {
-        LambdaQueryWrapper<OperationLogPO> wrapper = new LambdaQueryWrapper<>();
-        QueryConditionHelper.applyFieldCondition(wrapper, OperationLogPO::getBizCode, param.getBizCode());
-        QueryConditionHelper.applyFieldCondition(wrapper, OperationLogPO::getLogType, param.getLogType());
-        QueryConditionHelper.applyFieldCondition(wrapper, OperationLogPO::getOperator, param.getOperator());
-        QueryConditionHelper.applyFieldCondition(wrapper, OperationLogPO::getOperateTimeMs, param.getOperateTimeMs());
-        QueryConditionHelper.applyFieldCondition(wrapper, OperationLogPO::getCreateTimeMs, param.getCreateTimeMs());
-        QueryConditionHelper.applyConditions(wrapper, param.getConditions());
-        QueryConditionHelper.applyConditionNode(wrapper, param.getCondition(), createFieldResolver(OperationLogField.values()));
+        QueryWrapper<OperationLogPO> wrapper = new QueryWrapper<>();
+        applyCondition(wrapper, param.getCondition());
         return operationLogMapper.selectCount(wrapper);
     }
 
     @Override
     public PageResult<OperationLogIDTO> selectPage(SelectPageOperationLogParam param) {
-        LambdaQueryWrapper<OperationLogPO> wrapper = new LambdaQueryWrapper<>();
-        QueryConditionHelper.applyConditionNode(wrapper, param.getCondition(), createFieldResolver(OperationLogField.values()));
+        QueryWrapper<OperationLogPO> wrapper = new QueryWrapper<>();
+        QueryConditionHelper.applySelectFields(wrapper, param.getSelectFields());
+        applyCondition(wrapper, param.getCondition());
         applySorting(wrapper, param);
 
         Page<OperationLogPO> page = new Page<>(param.getCurrent(), param.getSize());
@@ -80,11 +67,14 @@ public class OperationLogRepositoryImpl implements OperationLogRepository {
         return OperationLogConverter.INSTANCE.operationLogPOIPage2PageResult(result);
     }
 
-    private void applySorting(LambdaQueryWrapper<OperationLogPO> wrapper, SelectPageOperationLogParam param) {
+    private void applyCondition(QueryWrapper<OperationLogPO> wrapper, ConditionNode condition) {
+        QueryConditionHelper.applyConditionNode(wrapper, condition, createFieldResolver(OperationLogField.values()));
+    }
+
+    private void applySorting(QueryWrapper<OperationLogPO> wrapper, SelectPageOperationLogParam param) {
         List<OrderBy> orders = param.getOrders();
         if (orders == null || orders.isEmpty()) {
-            wrapper.orderByDesc(OperationLogPO::getCreateTimeMs)
-                    .orderByDesc(OperationLogPO::getId);
+            wrapper.orderByDesc("create_time_ms").orderByDesc("id");
             return;
         }
 
@@ -95,26 +85,8 @@ public class OperationLogRepositoryImpl implements OperationLogRepository {
 
         for (OrderBy order : sortedOrders) {
             boolean isAsc = Boolean.TRUE.equals(order.getAscending());
-
-            switch (order.getField()) {
-                case BIZ_CODE:
-                    wrapper.orderBy(true, isAsc, OperationLogPO::getBizCode);
-                    break;
-                case LOG_TYPE:
-                    wrapper.orderBy(true, isAsc, OperationLogPO::getLogType);
-                    break;
-                case OPERATOR:
-                    wrapper.orderBy(true, isAsc, OperationLogPO::getOperator);
-                    break;
-                case OPERATE_TIME_MS:
-                    wrapper.orderBy(true, isAsc, OperationLogPO::getOperateTimeMs);
-                    break;
-                case CREATE_TIME_MS:
-                    wrapper.orderBy(true, isAsc, OperationLogPO::getCreateTimeMs);
-                    break;
-                default:
-                    wrapper.orderByDesc(OperationLogPO::getCreateTimeMs);
-            }
+            String column = order.getField().getColumnName();
+            wrapper.orderBy(true, isAsc, column);
         }
     }
 }

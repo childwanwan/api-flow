@@ -11,6 +11,9 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class ApiConfigRateLimitRuleVO {
     private String name;
-    private Long maxRequests;
-    private Long timeWindowMs;
+    private String type;
+    private String dimension;
+    private String keyTemplate;
+    private Integer limit;
+    private Integer windowSeconds;
 }

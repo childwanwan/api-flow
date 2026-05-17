@@ -84,22 +84,26 @@ public class GroupEventHandler {
     }
 
     private String buildUpdateDetail(GroupEventMessage msg) {
+        GroupEventMessage.Snapshot before = msg.snapshot();
         StringBuilder sb = new StringBuilder();
         sb.append("更新分组[").append(msg.aggregateId()).append("]");
-        if (msg.oldGroupCode() != null && !msg.oldGroupCode().equals(msg.groupCode())) {
-            sb.append("\n编码: ").append(msg.oldGroupCode()).append(" → ").append(msg.groupCode());
+        if (before != null && !nullSafeEquals(before.groupCode(), msg.groupCode())) {
+            sb.append("\n编码: ").append(before.groupCode()).append(" → ").append(msg.groupCode());
         }
-        if (msg.oldGroupName() != null && !msg.oldGroupName().equals(msg.groupName())) {
-            sb.append("\n名称: ").append(msg.oldGroupName()).append(" → ").append(msg.groupName());
+        if (before != null && !nullSafeEquals(before.groupName(), msg.groupName())) {
+            sb.append("\n名称: ").append(before.groupName()).append(" → ").append(msg.groupName());
         }
-        if (msg.oldGroupDescription() != null && !msg.oldGroupDescription().equals(msg.groupDescription())) {
-            sb.append("\n描述: ").append(msg.oldGroupDescription()).append(" → ").append(msg.groupDescription());
+        if (before != null && !nullSafeEquals(before.groupDescription(), msg.groupDescription())) {
+            sb.append("\n描述: ").append(before.groupDescription()).append(" → ").append(msg.groupDescription());
         }
         return sb.toString();
     }
 
+    private boolean nullSafeEquals(String a, String b) {
+        return a == null ? b == null : a.equals(b);
+    }
+
     private String buildDeleteDetail(GroupEventMessage msg) {
-        return String.format("删除分组[%s], 编码=%s, 名称=%s",
-                msg.aggregateId(), msg.groupCode(), msg.groupName());
+        return String.format("删除分组[%s]", msg.aggregateId());
     }
 }

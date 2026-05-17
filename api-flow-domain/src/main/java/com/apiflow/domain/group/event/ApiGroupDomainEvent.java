@@ -55,9 +55,17 @@ public class ApiGroupDomainEvent extends DomainEvent {
             this.oldGroupDescription = oldGroupDescription;
         }
 
-        public String getOldGroupCode() { return oldGroupCode; }
-        public String getOldGroupName() { return oldGroupName; }
-        public String getOldGroupDescription() { return oldGroupDescription; }
+        public String getOldGroupCode() {
+            return oldGroupCode;
+        }
+
+        public String getOldGroupName() {
+            return oldGroupName;
+        }
+
+        public String getOldGroupDescription() {
+            return oldGroupDescription;
+        }
 
     }
 
@@ -65,8 +73,8 @@ public class ApiGroupDomainEvent extends DomainEvent {
 
         private static final long serialVersionUID = 1L;
 
-        public Deleted(String groupNo, String groupCode, String groupName, String operator) {
-            super("API_GROUP_DELETED", groupNo, groupCode, groupName, null, operator);
+        public Deleted(String groupNo, String operator) {
+            super("API_GROUP_DELETED", groupNo, null, null, null, operator);
         }
     }
 }

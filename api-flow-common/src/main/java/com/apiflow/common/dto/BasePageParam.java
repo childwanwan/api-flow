@@ -1,11 +1,11 @@
 package com.apiflow.common.dto;
 
+import cn.hutool.core.util.ObjectUtil;
 import com.apiflow.common.exception.BusinessException;
 import com.apiflow.common.exception.ErrorCode;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import org.apache.commons.lang3.ObjectUtils;
 
 import java.util.List;
 
@@ -25,8 +25,8 @@ public class BasePageParam {
 
 
     public void validateBasePageParam() {
-        if (ObjectUtils.isEmpty(current)
-                || ObjectUtils.isEmpty(size)) {
+        if (ObjectUtil.isEmpty(current)
+                || ObjectUtil.isEmpty(size)) {
             throw new BusinessException(ErrorCode.PAGE_PARAM_IS_EMPTY);
         }
         if (size > 1000) {
@@ -42,10 +42,10 @@ public class BasePageParam {
     }
 
     public Long getEffectiveSize() {
-        return ObjectUtils.isNotEmpty(this.getSize()) ? this.getSize() : DEFAULT_SIZE;
+        return ObjectUtil.isNotEmpty(this.getSize()) ? this.getSize() : DEFAULT_SIZE;
     }
 
     public Long getEffectiveCurrent() {
-        return ObjectUtils.isNotEmpty(this.getCurrent()) ? this.getCurrent() : DEFAULT_CURRENT;
+        return ObjectUtil.isNotEmpty(this.getCurrent()) ? this.getCurrent() : DEFAULT_CURRENT;
     }
 }

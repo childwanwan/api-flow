@@ -6,6 +6,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>插件管理</title>
     <link rel="stylesheet" href="${request.contextPath}/static/css/common.css">
+    <link rel="stylesheet" href="${request.contextPath}/static/css/input-clear.css">
+    <script src="${request.contextPath}/static/js/input-clear.js"></script>
+    <script src="${request.contextPath}/static/js/common.js"></script>
 </head>
 <body class="iframe-body">
 <div class="iframe-content">
@@ -83,6 +86,7 @@ function showCreateDialog() {
     document.getElementById('formPluginClass').value='';
     document.getElementById('formPluginDesc').value='';
     document.getElementById('pluginModal').style.display='flex';
+    setTimeout(function(){ if(window.InputClear) InputClear.init(document.getElementById('pluginModal')); }, 100);
 }
 function hideModal() { document.getElementById('pluginModal').style.display='none'; }
 

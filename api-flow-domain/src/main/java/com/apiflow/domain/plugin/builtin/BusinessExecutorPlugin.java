@@ -1,6 +1,6 @@
 package com.apiflow.domain.plugin.builtin;
 
-import com.apiflow.domain.config.model.ApiConfigDO;
+import com.apiflow.domain.config.model.ApiConfig;
 import com.apiflow.domain.config.model.ExtraConfig;
 import com.apiflow.domain.plugin.Plugin;
 import com.apiflow.domain.plugin.PluginContext;
@@ -18,7 +18,6 @@ import java.util.HashMap;
 import java.util.Map;
 
 @Slf4j
-@Component
 public class BusinessExecutorPlugin implements Plugin {
 
     private static final HttpClient HTTP_CLIENT = HttpClient.newBuilder()

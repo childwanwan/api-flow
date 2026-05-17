@@ -26,4 +26,7 @@ public class UpdateApiConfigParam {
     private UpdateApiConfigPluginConfigParam pluginConfig;
     private UpdateTaskReceiptConfigParam receiptConfig;
     private UpdateApiConfigExtraConfigParam extraConfig;
+    private Long updateTimeMs;
+    private String updateOperator;
+    private Integer version;
 }

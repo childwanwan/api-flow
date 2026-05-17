@@ -1,5 +1,6 @@
 package com.apiflow.interfaces.base;
 
+import cn.hutool.core.util.StrUtil;
 import com.apiflow.api.repository.user.idto.UserIDTO;
 import com.apiflow.api.repository.user.param.InsertUserParam;
 import com.apiflow.api.repository.user.param.SelectUserParam;
@@ -19,7 +20,6 @@ import com.apiflow.interfaces.util.TokenUtil;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
@@ -65,9 +65,9 @@ public class UserController {
                                                 @RequestParam(required = false) String role,
                                                 @RequestParam(required = false) String status) {
         SelectUserParam param = SelectUserParam.builder()
-                .username(StringUtils.isBlank(username) ? null : FieldCondition.of(username))
-                .role(StringUtils.isBlank(role) ? null : FieldCondition.of(role))
-                .status(StringUtils.isBlank(status) ? null : FieldCondition.of(status))
+                .username(StrUtil.isBlank(username) ? null : FieldCondition.of(username))
+                .role(StrUtil.isBlank(role) ? null : FieldCondition.of(role))
+                .status(StrUtil.isBlank(status) ? null : FieldCondition.of(status))
                 .build();
         List<UserIDTO> userList = userService.getUserList(param);
         long total = userService.count(param);
@@ -96,10 +96,10 @@ public class UserController {
         String password = request.getPassword();
         String role = request.getRole();
 
-        if (StringUtils.isBlank(username)) {
+        if (StrUtil.isBlank(username)) {
             return Result.fail(ErrorCode.USER_USERNAME_EMPTY);
         }
-        if (StringUtils.isBlank(password)) {
+        if (StrUtil.isBlank(password)) {
             return Result.fail(ErrorCode.USER_PASSWORD_EMPTY);
         }
 
@@ -111,7 +111,7 @@ public class UserController {
         InsertUserParam insertParam = InsertUserParam.builder()
                 .username(username)
                 .password(MD5Util.encode(password))
-                .role(StringUtils.defaultIfBlank(role, "USER"))
+                .role(StrUtil.blankToDefault(role, "USER"))
                 .status(EnableStatus.ENABLED.getValue())
                 .createOperator(operator)
                 .build();
@@ -131,9 +131,9 @@ public class UserController {
 
         UpdateUserParam updateParam = UpdateUserParam.builder()
                 .id(id)
-                .password(StringUtils.isBlank(password) ? null : password)
-                .role(StringUtils.isBlank(role) ? null : role)
-                .status(StringUtils.isBlank(status) ? null : status)
+                .password(StrUtil.isBlank(password) ? null : password)
+                .role(StrUtil.isBlank(role) ? null : role)
+                .status(StrUtil.isBlank(status) ? null : status)
                 .build();
 
         if (userService.updateUser(updateParam)) {

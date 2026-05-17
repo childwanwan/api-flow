@@ -13,10 +13,7 @@ import java.util.Map;
 @AllArgsConstructor
 public class ExtraConfig {
 
-    private String region;
-    private String sellerId;
-    private String awsAccessKey;
-    private String environment;
+    private Map<String, String> envConfig;
 
     private String targetUrl;
     private String targetMethod;

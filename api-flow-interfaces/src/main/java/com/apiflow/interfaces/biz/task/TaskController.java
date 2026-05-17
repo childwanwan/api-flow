@@ -1,5 +1,7 @@
 package com.apiflow.interfaces.biz.task;
 
+import cn.hutool.core.util.ObjectUtil;
+import cn.hutool.core.util.StrUtil;
 import com.apiflow.application.task.TaskApplicationService;
 import com.apiflow.application.task.command.TaskCancelCommand;
 import com.apiflow.application.task.command.TaskRetryCommand;
@@ -13,8 +15,6 @@ import com.apiflow.interfaces.biz.task.request.TaskRetryRequest;
 import com.apiflow.interfaces.biz.task.request.TaskSubmitRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.ObjectUtils;
-import org.apache.commons.lang3.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -99,28 +99,28 @@ public class TaskController {
     }
 
     private void validateTaskSubmitRequest(TaskSubmitRequest request) {
-        if (ObjectUtils.isEmpty(request)) {
+        if (ObjectUtil.isEmpty(request)) {
             throw new IllegalArgumentException("request cannot be null");
         }
         request.validate();
     }
 
     private void validateTaskCancelRequest(TaskCancelRequest request) {
-        if (ObjectUtils.isEmpty(request)) {
+        if (ObjectUtil.isEmpty(request)) {
             throw new IllegalArgumentException("request cannot be null");
         }
         request.validate();
     }
 
     private void validateTaskRetryRequest(TaskRetryRequest request) {
-        if (ObjectUtils.isEmpty(request)) {
+        if (ObjectUtil.isEmpty(request)) {
             throw new IllegalArgumentException("request cannot be null");
         }
         request.validate();
     }
 
     private void validateTaskNo(String taskNo) {
-        if (StringUtils.isBlank(taskNo)) {
+        if (StrUtil.isBlank(taskNo)) {
             throw new IllegalArgumentException("taskNo cannot be blank");
         }
     }

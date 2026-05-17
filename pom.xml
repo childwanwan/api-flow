@@ -22,7 +22,6 @@
     <properties>
         <java.version>25</java.version>
         <mybatis-plus.version>3.5.15</mybatis-plus.version>
-        <commons-lang3.version>3.20.0</commons-lang3.version>
         <hutool.version>5.8.44</hutool.version>
         <lombok.version>1.18.46</lombok.version>
         <mapstruct.version>1.6.3</mapstruct.version>
@@ -110,9 +109,9 @@
             </dependency>
 
             <dependency>
-                <groupId>org.apache.commons</groupId>
-                <artifactId>commons-lang3</artifactId>
-                <version>${commons-lang3.version}</version>
+                <groupId>cn.hutool</groupId>
+                <artifactId>hutool-core</artifactId>
+                <version>${hutool.version}</version>
             </dependency>
 
 

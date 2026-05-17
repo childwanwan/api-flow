@@ -15,20 +15,20 @@ import com.apiflow.common.exception.BusinessException;
 import com.apiflow.common.exception.ErrorCode;
 import com.apiflow.common.util.JsonUtil;
 import com.apiflow.domain.config.converter.ApiConfigConverter;
-import com.apiflow.domain.config.model.ApiConfigDO;
+import com.apiflow.domain.config.model.ApiConfig;
 import com.apiflow.domain.config.model.PluginChainItem;
 import com.apiflow.domain.config.model.PluginConfig;
 import com.apiflow.domain.plugin.PluginChainExecutor;
 import com.apiflow.domain.plugin.PluginContext;
 import com.apiflow.domain.scheduler.TaskWakeUpSignal;
 import com.apiflow.domain.scheduler.TaskChangeEvent;
+import com.apiflow.domain.shared.event.DomainEventPublisher;
 import com.apiflow.domain.task.model.ExecInfo;
 import com.apiflow.domain.task.model.ReceiptConfig;
 import com.apiflow.domain.task.model.TaskDO;
 import com.apiflow.domain.task.service.TaskDomainService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -43,14 +43,14 @@ public class TaskApplicationService {
     private final ApiConfigRepository apiConfigRepository;
     private final TaskRepository taskRepository;
     private final PluginChainExecutor pluginChainExecutor;
-    private final ApplicationEventPublisher eventPublisher;
+    private final DomainEventPublisher domainEventPublisher;
     private final TaskWakeUpSignal taskWakeUpSignal;
     private static final ApiConfigConverter API_CONFIG_CONVERTER = ApiConfigConverter.INSTANCE;
 
     public TaskDTO submitTask(TaskSubmitCommand command) {
         SelectOneApiConfigParam configParam = SelectOneApiConfigParam.builder()
                 .apiCode(FieldCondition.of(command.getApiCode())).build();
-        ApiConfigDO config = API_CONFIG_CONVERTER.apiConfigIDTOToApiConfigDO(apiConfigRepository.selectOne(configParam));
+        ApiConfig config = API_CONFIG_CONVERTER.apiConfigIDTOToApiConfig(apiConfigRepository.selectOne(configParam));
         if (config == null || Boolean.TRUE.equals(config.getDeleted())) {
             throw new BusinessException(ErrorCode.API_NOT_FOUND);
         }
@@ -80,7 +80,7 @@ public class TaskApplicationService {
             task = executeTaskSync(task);
         }
 
-        eventPublisher.publishEvent(TaskChangeEvent.submitted(this, task.getTaskNo()));
+        domainEventPublisher.publish(TaskChangeEvent.submitted(task.getTaskNo()));
         taskWakeUpSignal.setSignal();
 
         return toDTO(task);
@@ -91,7 +91,7 @@ public class TaskApplicationService {
         try {
             SelectOneApiConfigParam configParam = SelectOneApiConfigParam.builder()
                     .apiCode(FieldCondition.of(task.getApiCode())).build();
-            ApiConfigDO config = API_CONFIG_CONVERTER.apiConfigIDTOToApiConfigDO(apiConfigRepository.selectOne(configParam));
+            ApiConfig config = API_CONFIG_CONVERTER.apiConfigIDTOToApiConfig(apiConfigRepository.selectOne(configParam));
 
             ExecInfo execInfo = executePluginChain(task, config);
             String responseData = execInfo != null ? JsonUtil.toJson(Map.of("result", "success", "costTimeMs", execInfo.getTotalCostTimeMs())) : JsonUtil.toJson(Map.of("result", "success"));
@@ -102,7 +102,7 @@ public class TaskApplicationService {
         }
     }
 
-    private ExecInfo executePluginChain(TaskDO task, ApiConfigDO config) {
+    private ExecInfo executePluginChain(TaskDO task, ApiConfig config) {
         Map<String, Object> params = null;
         Map<String, Object> customData = null;
         if (task.getRequestContext() != null) {
@@ -137,7 +137,7 @@ public class TaskApplicationService {
         }
     }
 
-    private List<PluginChainExecutor.PluginChainItemConfig> buildChainItems(ApiConfigDO config) {
+    private List<PluginChainExecutor.PluginChainItemConfig> buildChainItems(ApiConfig config) {
         if (config != null && config.getPluginConfig() != null
                 && Boolean.TRUE.equals(config.getPluginConfig().getEnabled())
                 && config.getPluginConfig().getPluginChain() != null) {
@@ -166,7 +166,7 @@ public class TaskApplicationService {
 
     public TaskDTO retryTask(TaskRetryCommand command) {
         TaskDO task = taskDomainService.retryTask(command.getTaskNo());
-        eventPublisher.publishEvent(TaskChangeEvent.retried(this, task.getTaskNo()));
+        domainEventPublisher.publish(TaskChangeEvent.retried(task.getTaskNo()));
         taskWakeUpSignal.setSignal();
         return toDTO(task);
     }

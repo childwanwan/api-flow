@@ -86,8 +86,8 @@ public class ApiConfigRepositoryImpl implements ApiConfigRepository {
         QueryConditionHelper.applyFieldCondition(wrapper, ApiConfigField.MAX_QUEUE_SIZE.getColumnName(), param.getMaxQueueSize());
         QueryConditionHelper.applyFieldCondition(wrapper, ApiConfigField.CREATE_TIME_MS.getColumnName(), param.getCreateTimeMs());
         QueryConditionHelper.applyFieldCondition(wrapper, ApiConfigField.UPDATE_TIME_MS.getColumnName(), param.getUpdateTimeMs());
-        QueryConditionHelper.applyJsonFieldCondition(wrapper, "rate_limit_config", "maxRequests", param.getRateLimitConfigMaxRequests());
-        QueryConditionHelper.applyJsonFieldCondition(wrapper, "rate_limit_config", "timeWindowMs", param.getRateLimitConfigTimeWindowMs());
+        QueryConditionHelper.applyJsonFieldCondition(wrapper, "rate_limit_config", "limit", param.getRateLimitConfigLimit());
+        QueryConditionHelper.applyJsonFieldCondition(wrapper, "rate_limit_config", "windowSeconds", param.getRateLimitConfigWindowSeconds());
     }
 
     private void applyConditions(QueryWrapper<ApiConfigPO> wrapper, SelectApiConfigParam param) {
@@ -100,8 +100,8 @@ public class ApiConfigRepositoryImpl implements ApiConfigRepository {
         QueryConditionHelper.applyFieldCondition(wrapper, ApiConfigField.MAX_QUEUE_SIZE.getColumnName(), param.getMaxQueueSize());
         QueryConditionHelper.applyFieldCondition(wrapper, ApiConfigField.CREATE_TIME_MS.getColumnName(), param.getCreateTimeMs());
         QueryConditionHelper.applyFieldCondition(wrapper, ApiConfigField.UPDATE_TIME_MS.getColumnName(), param.getUpdateTimeMs());
-        QueryConditionHelper.applyJsonFieldCondition(wrapper, "rate_limit_config", "maxRequests", param.getRateLimitConfigMaxRequests());
-        QueryConditionHelper.applyJsonFieldCondition(wrapper, "rate_limit_config", "timeWindowMs", param.getRateLimitConfigTimeWindowMs());
+        QueryConditionHelper.applyJsonFieldCondition(wrapper, "rate_limit_config", "limit", param.getRateLimitConfigLimit());
+        QueryConditionHelper.applyJsonFieldCondition(wrapper, "rate_limit_config", "windowSeconds", param.getRateLimitConfigWindowSeconds());
     }
 
     private LambdaQueryWrapper<ApiConfigPO> buildLambdaQueryWrapper(SelectOneApiConfigParam param) {
@@ -115,8 +115,8 @@ public class ApiConfigRepositoryImpl implements ApiConfigRepository {
         QueryConditionHelper.applyFieldCondition(wrapper, ApiConfigPO::getMaxQueueSize, param.getMaxQueueSize());
         QueryConditionHelper.applyFieldCondition(wrapper, ApiConfigPO::getCreateTimeMs, param.getCreateTimeMs());
         QueryConditionHelper.applyFieldCondition(wrapper, ApiConfigPO::getUpdateTimeMs, param.getUpdateTimeMs());
-        QueryConditionHelper.applyJsonFieldCondition(wrapper, "rate_limit_config", "maxRequests", param.getRateLimitConfigMaxRequests());
-        QueryConditionHelper.applyJsonFieldCondition(wrapper, "rate_limit_config", "timeWindowMs", param.getRateLimitConfigTimeWindowMs());
+        QueryConditionHelper.applyJsonFieldCondition(wrapper, "rate_limit_config", "limit", param.getRateLimitConfigLimit());
+        QueryConditionHelper.applyJsonFieldCondition(wrapper, "rate_limit_config", "windowSeconds", param.getRateLimitConfigWindowSeconds());
         return wrapper;
     }
 
@@ -131,8 +131,8 @@ public class ApiConfigRepositoryImpl implements ApiConfigRepository {
         QueryConditionHelper.applyFieldCondition(wrapper, ApiConfigPO::getMaxQueueSize, param.getMaxQueueSize());
         QueryConditionHelper.applyFieldCondition(wrapper, ApiConfigPO::getCreateTimeMs, param.getCreateTimeMs());
         QueryConditionHelper.applyFieldCondition(wrapper, ApiConfigPO::getUpdateTimeMs, param.getUpdateTimeMs());
-        QueryConditionHelper.applyJsonFieldCondition(wrapper, "rate_limit_config", "maxRequests", param.getRateLimitConfigMaxRequests());
-        QueryConditionHelper.applyJsonFieldCondition(wrapper, "rate_limit_config", "timeWindowMs", param.getRateLimitConfigTimeWindowMs());
+        QueryConditionHelper.applyJsonFieldCondition(wrapper, "rate_limit_config", "limit", param.getRateLimitConfigLimit());
+        QueryConditionHelper.applyJsonFieldCondition(wrapper, "rate_limit_config", "windowSeconds", param.getRateLimitConfigWindowSeconds());
         return wrapper;
     }
 

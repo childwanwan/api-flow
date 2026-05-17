@@ -1,5 +1,7 @@
 package com.apiflow.infrastructure.persistence.mybatis.user;
 
+import cn.hutool.core.util.ObjectUtil;
+import cn.hutool.core.util.StrUtil;
 import com.apiflow.common.enums.EnableStatus;
 import com.apiflow.api.repository.user.UserRepository;
 import com.apiflow.api.repository.user.idto.UserIDTO;
@@ -14,8 +16,6 @@ import com.apiflow.infrastructure.persistence.mybatis.util.QueryConditionHelper;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import lombok.RequiredArgsConstructor;
-import org.apache.commons.lang3.ObjectUtils;
-import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -30,7 +30,7 @@ public class UserRepositoryImpl implements UserRepository {
 
     @Override
     public UserIDTO selectOne(SelectOneUserParam param) {
-        if (ObjectUtils.isEmpty(param) || param.isEmpty()) {
+        if (ObjectUtil.isEmpty(param) || param.isEmpty()) {
             return null;
         }
         if (param.getSelectFields() != null && !param.getSelectFields().isEmpty()) {
@@ -83,14 +83,14 @@ public class UserRepositoryImpl implements UserRepository {
 
     @Override
     public int insert(InsertUserParam param) {
-        if (ObjectUtils.isEmpty(param)) {
+        if (ObjectUtil.isEmpty(param)) {
             return 0;
         }
         UserPO userPO = UserPO.builder()
                 .username(param.getUsername())
                 .password(param.getPassword())
-                .role(StringUtils.defaultIfBlank(param.getRole(), "USER"))
-                .status(StringUtils.defaultIfBlank(param.getStatus(), EnableStatus.ENABLED.getValue()))
+                .role(StrUtil.blankToDefault(param.getRole(), "USER"))
+                .status(StrUtil.blankToDefault(param.getStatus(), EnableStatus.ENABLED.getValue()))
                 .createOperator(param.getCreateOperator())
                 .createTimeMs(System.currentTimeMillis())
                 .updateTimeMs(System.currentTimeMillis())
@@ -100,18 +100,18 @@ public class UserRepositoryImpl implements UserRepository {
 
     @Override
     public int update(UpdateUserParam param) {
-        if (ObjectUtils.isEmpty(param) || ObjectUtils.isEmpty(param.getId())) {
+        if (ObjectUtil.isEmpty(param) || ObjectUtil.isEmpty(param.getId())) {
             return 0;
         }
         UserPO userPO = new UserPO();
         userPO.setId(param.getId());
-        if (StringUtils.isNotBlank(param.getPassword())) {
+        if (StrUtil.isNotBlank(param.getPassword())) {
             userPO.setPassword(param.getPassword());
         }
-        if (StringUtils.isNotBlank(param.getRole())) {
+        if (StrUtil.isNotBlank(param.getRole())) {
             userPO.setRole(param.getRole());
         }
-        if (StringUtils.isNotBlank(param.getStatus())) {
+        if (StrUtil.isNotBlank(param.getStatus())) {
             userPO.setStatus(param.getStatus());
         }
         if (param.getLastLoginTimeMs() != null) {
@@ -123,7 +123,7 @@ public class UserRepositoryImpl implements UserRepository {
 
     @Override
     public int delete(Long id) {
-        if (ObjectUtils.isEmpty(id)) {
+        if (ObjectUtil.isEmpty(id)) {
             return 0;
         }
         return userMapper.deleteById(id);

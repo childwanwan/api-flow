@@ -3,9 +3,7 @@ package com.apiflow.domain.plugin.builtin;
 import com.apiflow.domain.plugin.Plugin;
 import com.apiflow.domain.plugin.PluginContext;
 import com.apiflow.domain.plugin.PluginResult;
-import org.springframework.stereotype.Component;
 
-@Component
 public class RateLimitCheckPlugin implements Plugin {
 
     @Override

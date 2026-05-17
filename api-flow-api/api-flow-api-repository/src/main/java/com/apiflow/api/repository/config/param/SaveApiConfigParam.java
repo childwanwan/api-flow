@@ -25,4 +25,10 @@ public class SaveApiConfigParam {
     private SaveApiConfigPluginConfigParam pluginConfig;
     private SaveTaskReceiptConfigParam receiptConfig;
     private SaveApiConfigExtraConfigParam extraConfig;
+    private Long createTimeMs;
+    private Long updateTimeMs;
+    private String createOperator;
+    private String updateOperator;
+    private Boolean deleted;
+    private Integer version;
 }

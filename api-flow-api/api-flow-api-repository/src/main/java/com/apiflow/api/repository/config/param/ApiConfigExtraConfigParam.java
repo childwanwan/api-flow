@@ -5,13 +5,12 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.Map;
+
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 public class ApiConfigExtraConfigParam {
-    private String region;
-    private String sellerId;
-    private String awsAccessKey;
-    private String environment;
+    private Map<String, String> envConfig;
 }

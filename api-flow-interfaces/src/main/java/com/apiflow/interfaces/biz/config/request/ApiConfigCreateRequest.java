@@ -16,6 +16,7 @@ public class ApiConfigCreateRequest {
     private String apiCode;
     private String apiName;
     private String apiDescription;
+    private String status;
     private Long requestTimeoutMs;
     private Integer autoRetryCount;
     private Long retryIntervalMs;
@@ -23,6 +24,7 @@ public class ApiConfigCreateRequest {
     private Integer maxQueueSize;
     private ApiConfigFilterRulesRequest filterRules;
     private ApiConfigPluginConfigRequest pluginConfig;
+    private ApiConfigReceiptConfigRequest receiptConfig;
     private ApiConfigExtraConfigRequest extraConfig;
     private String operator;
 
@@ -34,9 +36,12 @@ public class ApiConfigCreateRequest {
         ValidationHelper.validateNotBlank(apiName, "apiName");
         ValidationHelper.validateSize(apiName, 256, "apiName");
         ValidationHelper.validateSize(apiDescription, 1024, "apiDescription");
+        if (status != null) {
+            ValidationHelper.validatePattern(status, "^(ENABLED|DISABLED)$", "status");
+        }
         ValidationHelper.validateRange(requestTimeoutMs, 100L, 300000L, "requestTimeoutMs");
         ValidationHelper.validateNonNegative(autoRetryCount, "autoRetryCount");
-        ValidationHelper.validateMax(autoRetryCount, 10, "autoRetryCount");
+        ValidationHelper.validateMax(autoRetryCount, 128, "autoRetryCount");
         ValidationHelper.validateRange(retryIntervalMs, 100L, 60000L, "retryIntervalMs");
         ValidationHelper.validateNonNegative(maxQueueSize, "maxQueueSize");
         ValidationHelper.validateMax(maxQueueSize, 100000, "maxQueueSize");
@@ -50,6 +55,9 @@ public class ApiConfigCreateRequest {
         }
         if (pluginConfig != null) {
             pluginConfig.validate();
+        }
+        if (receiptConfig != null) {
+            receiptConfig.validate();
         }
         if (extraConfig != null) {
             extraConfig.validate();

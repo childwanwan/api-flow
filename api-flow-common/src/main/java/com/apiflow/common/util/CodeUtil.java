@@ -1,8 +1,9 @@
 package com.apiflow.common.util;
 
-import org.apache.commons.lang3.time.DateFormatUtils;
+import cn.hutool.core.date.DateUtil;
 
 import java.security.SecureRandom;
+import java.util.Date;
 
 public class CodeUtil {
     private static final String ALPHANUMERIC = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
@@ -17,7 +18,7 @@ public class CodeUtil {
     }
 
     public static String generateCode(int length) {
-        return DateFormatUtils.format(System.currentTimeMillis(), "yyyyMMddHHmmssSSS") + generate(length);
+        return DateUtil.format(new Date(), "yyyyMMddHHmmssSSS") + generate(length);
     }
 
 }

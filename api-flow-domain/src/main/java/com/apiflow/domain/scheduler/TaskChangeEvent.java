@@ -1,14 +1,14 @@
 package com.apiflow.domain.scheduler;
 
-import org.springframework.context.ApplicationEvent;
+import com.apiflow.domain.shared.event.DomainEvent;
 
-public class TaskChangeEvent extends ApplicationEvent {
+public class TaskChangeEvent extends DomainEvent {
 
     private final String taskNo;
     private final String changeType;
 
-    public TaskChangeEvent(Object source, String taskNo, String changeType) {
-        super(source);
+    public TaskChangeEvent(String taskNo, String changeType) {
+        super(changeType, "TASK", taskNo);
         this.taskNo = taskNo;
         this.changeType = changeType;
     }
@@ -21,11 +21,11 @@ public class TaskChangeEvent extends ApplicationEvent {
         return changeType;
     }
 
-    public static TaskChangeEvent submitted(Object source, String taskNo) {
-        return new TaskChangeEvent(source, taskNo, "SUBMITTED");
+    public static TaskChangeEvent submitted(String taskNo) {
+        return new TaskChangeEvent(taskNo, "SUBMITTED");
     }
 
-    public static TaskChangeEvent retried(Object source, String taskNo) {
-        return new TaskChangeEvent(source, taskNo, "RETRIED");
+    public static TaskChangeEvent retried(String taskNo) {
+        return new TaskChangeEvent(taskNo, "RETRIED");
     }
 }

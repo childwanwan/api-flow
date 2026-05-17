@@ -10,6 +10,7 @@ public class ApiConfigCreateCommand {
     private String apiCode;
     private String apiName;
     private String apiDescription;
+    private String status;
     private Long requestTimeoutMs;
     private Integer autoRetryCount;
     private Long retryIntervalMs;

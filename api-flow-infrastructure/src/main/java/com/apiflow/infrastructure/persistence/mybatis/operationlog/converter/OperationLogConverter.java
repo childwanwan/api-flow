@@ -1,11 +1,11 @@
 package com.apiflow.infrastructure.persistence.mybatis.operationlog.converter;
 
+import cn.hutool.core.util.ObjectUtil;
 import com.apiflow.api.repository.operationlog.idto.OperationLogIDTO;
 import com.apiflow.api.repository.operationlog.param.SaveOperationLogParam;
 import com.apiflow.common.result.PageResult;
 import com.apiflow.infrastructure.persistence.mybatis.operationlog.entity.OperationLogPO;
 import com.baomidou.mybatisplus.core.metadata.IPage;
-import org.apache.commons.lang3.ObjectUtils;
 import org.mapstruct.AfterMapping;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
@@ -24,7 +24,7 @@ public interface OperationLogConverter {
 
     @AfterMapping
     default void afterToSaveParam(SaveOperationLogParam source, @MappingTarget OperationLogPO target) {
-        if (ObjectUtils.isEmpty(target)) {
+        if (ObjectUtil.isEmpty(target)) {
             return;
         }
         target.setCreateTimeMs(System.currentTimeMillis());

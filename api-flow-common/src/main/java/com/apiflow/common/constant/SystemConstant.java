@@ -7,6 +7,9 @@ public class SystemConstant {
     public static final int MAX_QUERY_LIMIT = 1000;
     public static final int DEFAULT_BATCH_SIZE = 100;
 
+    public static final int DEFAULT_MAX_LIMIT = 200;
+
+
     public static final Long DEFAULT_REQUEST_TIMEOUT_MS = 30000L;
     public static final int DEFAULT_AUTO_RETRY_COUNT = 64;
     public static final Long DEFAULT_RETRY_INTERVAL_MS = 5000L;

@@ -10,8 +10,8 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class ApiConfigFilterRuleVO {
-    private String name;
-    private String type;
-    private String expression;
-    private Boolean enabled;
+    private String field;
+    private String operator;
+    private String value;
+    private String message;
 }

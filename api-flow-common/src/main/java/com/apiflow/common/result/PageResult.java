@@ -15,13 +15,13 @@ import java.util.List;
 public class PageResult<T> {
 
     private List<T> records;
-    
+
     private long total;
-    
+
     private long size;
-    
+
     private long current;
-    
+
     private long pages;
 
     public static <T> PageResult<T> empty() {
@@ -33,7 +33,7 @@ public class PageResult<T> {
                 .pages(0)
                 .build();
     }
-    
+
     public static <T> PageResult<T> of(List<T> records, long total, long current, long size) {
         long pages = size > 0 ? (total + size - 1) / size : 0;
         return PageResult.<T>builder()
@@ -44,11 +44,11 @@ public class PageResult<T> {
                 .pages(pages)
                 .build();
     }
-    
+
     public boolean hasNext() {
         return current < pages;
     }
-    
+
     public boolean hasPrevious() {
         return current > 1;
     }

@@ -19,6 +19,9 @@ public enum ErrorCode {
     GROUP_CODE_EXIST("30001", "分组编码已存在"),
     GROUP_CODE_EMPTY("30002", "分组编码不能为空"),
     GROUP_NAME_EMPTY("30003", "分组名称不能为空"),
+    GROUP_CODE_TOO_LONG("30004", "分组编码长度不能超过64个字符"),
+    GROUP_NAME_TOO_LONG("30005", "分组名称长度不能超过128个字符"),
+    GROUP_DESCRIPTION_TOO_LONG("30006", "分组描述长度不能超过512个字符"),
 
 
 

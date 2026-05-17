@@ -759,6 +759,7 @@ a:hover {
     transition: all var(--transition-fast);
     min-width: 180px;
     font-family: inherit;
+    box-sizing: border-box;
 }
 
 .input:hover {
@@ -1481,6 +1482,7 @@ a:hover {
     outline: none;
     transition: all var(--transition-fast);
     font-family: inherit;
+    box-sizing: border-box;
 }
 
 .form-group .form-control:hover {

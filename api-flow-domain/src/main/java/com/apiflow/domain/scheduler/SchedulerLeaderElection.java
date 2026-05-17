@@ -2,13 +2,10 @@ package com.apiflow.domain.scheduler;
 
 import com.apiflow.api.cache.CacheGateway;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Component;
-
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 @Slf4j
-@Component
 public class SchedulerLeaderElection {
 
     private static final String LEADER_KEY = "scheduler:leader";

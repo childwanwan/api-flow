@@ -1,20 +1,29 @@
 package com.apiflow.domain.group.converter;
 
 import com.apiflow.api.repository.group.idto.ApiGroupIDTO;
-import com.apiflow.api.repository.group.param.SaveApiGroupParam;
-import com.apiflow.api.repository.group.param.UpdateApiGroupParam;
 import com.apiflow.domain.group.model.ApiGroup;
-import org.mapstruct.Mapper;
-import org.mapstruct.factory.Mappers;
 
-@Mapper(implementationName = "DomainApiGroupConverter")
-public interface ApiGroupConverter {
+public class ApiGroupConverter {
 
-    ApiGroupConverter INSTANCE = Mappers.getMapper(ApiGroupConverter.class);
+    public static final ApiGroupConverter INSTANCE = new ApiGroupConverter();
 
-    ApiGroup toAggregate(ApiGroupIDTO idto);
+    private ApiGroupConverter() {
+    }
 
-    SaveApiGroupParam toSaveParam(ApiGroup aggregate);
-
-    UpdateApiGroupParam toUpdateParam(ApiGroup aggregate);
+    public ApiGroup toAggregate(ApiGroupIDTO idto) {
+        if (idto == null) {
+            return null;
+        }
+        return ApiGroup.reconstitute()
+                .id(idto.getId())
+                .groupNo(idto.getGroupNo())
+                .groupCode(idto.getGroupCode())
+                .groupName(idto.getGroupName())
+                .groupDescription(idto.getGroupDescription())
+                .createTimeMs(idto.getCreateTimeMs())
+                .updateTimeMs(idto.getUpdateTimeMs())
+                .createOperator(idto.getCreateOperator())
+                .updateOperator(idto.getUpdateOperator())
+                .build();
+    }
 }

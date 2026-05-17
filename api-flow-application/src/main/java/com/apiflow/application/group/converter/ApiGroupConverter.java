@@ -1,13 +1,15 @@
 package com.apiflow.application.group.converter;
 
+import cn.hutool.core.util.ObjectUtil;
+import cn.hutool.core.util.StrUtil;
 import com.apiflow.api.repository.group.idto.ApiGroupIDTO;
 import com.apiflow.api.repository.group.param.*;
 import com.apiflow.application.group.dto.ApiGroupDTO;
+import com.apiflow.application.group.param.ApiGroupListParam;
 import com.apiflow.application.group.param.ApiGroupPageParam;
 import com.apiflow.common.dto.SortOrder;
 import com.apiflow.common.repository.ConditionNode;
-import org.apache.commons.lang3.ObjectUtils;
-import org.apache.commons.lang3.StringUtils;
+import com.apiflow.domain.group.model.ApiGroup;
 import org.mapstruct.Mapper;
 import org.mapstruct.factory.Mappers;
 import org.springframework.util.CollectionUtils;
@@ -21,11 +23,20 @@ import java.util.stream.Collectors;
 public interface ApiGroupConverter {
     ApiGroupConverter INSTANCE = Mappers.getMapper(ApiGroupConverter.class);
 
+    SaveApiGroupParam toSaveParam(ApiGroup aggregate);
+
+    UpdateApiGroupParam toUpdateParam(ApiGroup aggregate);
+
     default SelectPageApiGroupParam apiGroupPageParam2SelectPageApiGroupParam(ApiGroupPageParam param) {
-        if (ObjectUtils.isEmpty(param)) {
+        if (ObjectUtil.isEmpty(param)) {
             return null;
         }
         SelectPageApiGroupParam.SelectPageApiGroupParamBuilder paramBuilder = SelectPageApiGroupParam.builder();
+        paramBuilder.selectFields(List.of(ApiGroupField.GROUP_NO,
+                ApiGroupField.GROUP_CODE,
+                ApiGroupField.GROUP_NAME,
+                ApiGroupField.GROUP_DESCRIPTION,
+                ApiGroupField.CREATE_TIME_MS));
 
         ConditionNode condition = buildConditionNode(param);
         if (condition != null) {
@@ -41,19 +52,26 @@ public interface ApiGroupConverter {
         return paramBuilder.build();
     }
 
+    default SelectApiGroupParam apiGroupListParam2SelectApiGroupParam(ApiGroupListParam param) {
+        SelectApiGroupParam.SelectApiGroupParamBuilder paramBuilder = SelectApiGroupParam.builder();
+        paramBuilder.selectFields(List.of(ApiGroupField.GROUP_NO, ApiGroupField.GROUP_CODE, ApiGroupField.GROUP_NAME));
+        paramBuilder.orders(List.of(OrderBy.desc(ApiGroupField.CREATE_TIME_MS), OrderBy.desc(ApiGroupField.ID)));
+        return paramBuilder.build();
+    }
+
     List<ApiGroupDTO> apiGroupIDTO2ApiGroupDTOList(List<ApiGroupIDTO> list);
 
     ApiGroupDTO apiGroupIDTO2ApiGroupDTO(ApiGroupIDTO apiGroupIDTO);
 
     private ConditionNode buildConditionNode(ApiGroupPageParam param) {
         List<ConditionNode> nodes = new ArrayList<>();
-        if (StringUtils.isNotEmpty(param.getGroupNoLike())) {
+        if (StrUtil.isNotEmpty(param.getGroupNoLike())) {
             nodes.add(ConditionNode.like(ApiGroupField.GROUP_NO.getFieldName(), param.getGroupNoLike()));
         }
-        if (StringUtils.isNotEmpty(param.getGroupCodeLike())) {
+        if (StrUtil.isNotEmpty(param.getGroupCodeLike())) {
             nodes.add(ConditionNode.like(ApiGroupField.GROUP_CODE.getFieldName(), param.getGroupCodeLike()));
         }
-        if (StringUtils.isNotEmpty(param.getGroupNameLike())) {
+        if (StrUtil.isNotEmpty(param.getGroupNameLike())) {
             nodes.add(ConditionNode.like(ApiGroupField.GROUP_NAME.getFieldName(), param.getGroupNameLike()));
         }
         if (nodes.isEmpty()) {
@@ -68,21 +86,21 @@ public interface ApiGroupConverter {
         }
 
         return sortOrderList.stream()
-                .filter(order -> StringUtils.isNotEmpty(order.getField()))
+                .filter(order -> StrUtil.isNotEmpty(order.getField()))
                 .map(order -> {
                     try {
                         ApiGroupField field = ApiGroupField.valueOf(order.getField().toUpperCase());
                         return OrderBy.builder()
                                 .field(field)
-                                .ascending(ObjectUtils.isNotEmpty(order.getAscending()) ? order.getAscending() : true)
+                                .ascending(ObjectUtil.isNotEmpty(order.getAscending()) ? order.getAscending() : true)
                                 .order(order.getOrder())
                                 .build();
                     } catch (IllegalArgumentException e) {
                         return null;
                     }
                 })
-                .filter(ObjectUtils::isNotEmpty)
-                .sorted(Comparator.comparing(order -> ObjectUtils.isNotEmpty(order.getOrder()) ? order.getOrder() : Integer.MAX_VALUE))
+                .filter(ObjectUtil::isNotEmpty)
+                .sorted(Comparator.comparing(order -> ObjectUtil.isNotEmpty(order.getOrder()) ? order.getOrder() : Integer.MAX_VALUE))
                 .collect(Collectors.toList());
     }
 }

@@ -1,5 +1,7 @@
 package com.apiflow.interfaces.biz.config;
 
+import cn.hutool.core.util.ObjectUtil;
+import cn.hutool.core.util.StrUtil;
 import com.apiflow.application.user.AuthService;
 import com.apiflow.application.config.ApiConfigApplicationService;
 import com.apiflow.application.config.command.ApiConfigDeleteCommand;
@@ -16,8 +18,6 @@ import com.apiflow.interfaces.util.TokenUtil;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.ObjectUtils;
-import org.apache.commons.lang3.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -32,7 +32,6 @@ public class ApiConfigController {
     private final AuthService authService;
 
     @PostMapping("/create")
-    @OpLog(module = "API配置", operation = "创建", detail = "创建API配置")
     public Result<ApiConfigVO> createConfig(@RequestBody ApiConfigCreateRequest request) {
         validateApiConfigCreateRequest(request);
         log.info("Create config request: {}", request);
@@ -41,7 +40,6 @@ public class ApiConfigController {
     }
 
     @PutMapping("/update")
-    @OpLog(module = "API配置", operation = "更新", detail = "更新API配置")
     public Result<ApiConfigVO> updateConfig(@RequestBody ApiConfigUpdateRequest request) {
         validateApiConfigUpdateRequest(request);
         log.info("Update config request: {}", request);
@@ -59,12 +57,13 @@ public class ApiConfigController {
 
     @GetMapping("/list")
     public Result<List<ApiConfigVO>> listConfigs(
+            @RequestParam(required = false) String groupNo,
             @RequestParam(required = false) String apiCode,
             @RequestParam(required = false) String apiName,
             @RequestParam(required = false) String status,
             @RequestParam(required = false) Integer limit) {
-        log.info("List configs request: apiCode={}, apiName={}, status={}, limit={}", apiCode, apiName, status, limit);
-        List<ApiConfigDTO> configs = apiConfigApplicationService.listConfigs(apiCode, apiName, status, limit);
+        log.info("List configs request: groupNo={}, apiCode={}, apiName={}, status={}, limit={}", groupNo, apiCode, apiName, status, limit);
+        List<ApiConfigDTO> configs = apiConfigApplicationService.listConfigs(groupNo, apiCode, apiName, status, limit);
         List<ApiConfigVO> vos = configs.stream().map(ApiConfigConverter.INSTANCE::toVO).toList();
         return Result.success(vos);
     }
@@ -97,34 +96,34 @@ public class ApiConfigController {
 
     @DeleteMapping("/{apiCode}")
     @OpLog(module = "API配置", operation = "删除", detail = "删除API配置")
-    public Result<ApiConfigVO> deleteConfig(@PathVariable String apiCode,
+    public Result<String> deleteConfig(@PathVariable String apiCode,
                                             HttpServletRequest request) {
         log.info("Delete config request: apiCode={}", apiCode);
         ApiConfigDeleteCommand command = ApiConfigDeleteCommand.builder()
                 .apiCode(apiCode)
                 .operator(authService.getUsernameByToken(TokenUtil.getTokenFromCookie(request)))
                 .build();
-        ApiConfigDTO config = apiConfigApplicationService.deleteConfig(command);
-        return Result.success(ApiConfigConverter.INSTANCE.toVO(config));
+        apiConfigApplicationService.deleteConfig(command);
+        return Result.success(apiCode);
     }
 
 
     private void validateApiConfigCreateRequest(ApiConfigCreateRequest request) {
-        if (ObjectUtils.isEmpty(request)) {
+        if (ObjectUtil.isEmpty(request)) {
             throw new IllegalArgumentException("request cannot be null");
         }
         request.validate();
     }
 
     private void validateApiConfigUpdateRequest(ApiConfigUpdateRequest request) {
-        if (ObjectUtils.isEmpty(request)) {
+        if (ObjectUtil.isEmpty(request)) {
             throw new IllegalArgumentException("request cannot be null");
         }
         request.validate();
     }
 
     private void validateApiCode(String apiCode) {
-        if (StringUtils.isBlank(apiCode)) {
+        if (StrUtil.isBlank(apiCode)) {
             throw new IllegalArgumentException("apiCode cannot be blank");
         }
     }

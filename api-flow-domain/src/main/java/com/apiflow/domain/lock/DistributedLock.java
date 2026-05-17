@@ -3,12 +3,9 @@ package com.apiflow.domain.lock;
 import com.apiflow.api.cache.CacheGateway;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Component;
-
 import java.util.concurrent.TimeUnit;
 
 @Slf4j
-@Component
 @Deprecated
 @RequiredArgsConstructor
 public class DistributedLock {

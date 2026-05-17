@@ -1,14 +1,14 @@
 package com.apiflow.domain.group;
 
-import org.springframework.context.ApplicationEvent;
+import com.apiflow.domain.shared.event.DomainEvent;
 
-public class GroupChangeEvent extends ApplicationEvent {
+public class GroupChangeEvent extends DomainEvent {
 
     private final String groupNo;
     private final String changeType;
 
-    public GroupChangeEvent(Object source, String groupNo, String changeType) {
-        super(source);
+    public GroupChangeEvent(String groupNo, String changeType) {
+        super(changeType, "GROUP", groupNo);
         this.groupNo = groupNo;
         this.changeType = changeType;
     }
@@ -21,15 +21,15 @@ public class GroupChangeEvent extends ApplicationEvent {
         return changeType;
     }
 
-    public static GroupChangeEvent updated(Object source, String groupNo) {
-        return new GroupChangeEvent(source, groupNo, "UPDATED");
+    public static GroupChangeEvent updated(String groupNo) {
+        return new GroupChangeEvent(groupNo, "UPDATED");
     }
 
-    public static GroupChangeEvent deleted(Object source, String groupNo) {
-        return new GroupChangeEvent(source, groupNo, "DELETED");
+    public static GroupChangeEvent deleted(String groupNo) {
+        return new GroupChangeEvent(groupNo, "DELETED");
     }
 
-    public static GroupChangeEvent created(Object source, String groupNo) {
-        return new GroupChangeEvent(source, groupNo, "CREATED");
+    public static GroupChangeEvent created(String groupNo) {
+        return new GroupChangeEvent(groupNo, "CREATED");
     }
 }

@@ -6,7 +6,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>分组管理</title>
     <link rel="stylesheet" href="${request.contextPath}/static/css/common.css">
+    <link rel="stylesheet" href="${request.contextPath}/static/css/input-clear.css">
     <script src="${request.contextPath}/static/js/pagination.js"></script>
+    <script src="${request.contextPath}/static/js/input-clear.js"></script>
+    <script src="${request.contextPath}/static/js/common.js"></script>
     <style>
         .sortable {
             cursor: pointer;
@@ -88,20 +91,38 @@
         <div class="modal-body">
             <div class="form-group">
                 <label>分组编码 <span class="required">*</span></label>
-                <input type="text" id="formGroupCode" class="form-control" placeholder="如：AMAZON_GROUP" required>
+                <input type="text" id="formGroupCode" class="form-control" placeholder="如：AMAZON_GROUP" maxlength="64" required>
             </div>
             <div class="form-group">
                 <label>分组名称 <span class="required">*</span></label>
-                <input type="text" id="formGroupName" class="form-control" placeholder="如：亚马逊渠道">
+                <input type="text" id="formGroupName" class="form-control" placeholder="如：亚马逊渠道" maxlength="128">
             </div>
             <div class="form-group">
                 <label>分组描述</label>
-                <textarea id="formGroupDesc" class="form-control" placeholder="请输入分组描述"></textarea>
+                <textarea id="formGroupDesc" class="form-control" placeholder="请输入分组描述" maxlength="512"></textarea>
             </div>
         </div>
         <div class="modal-footer">
             <button class="btn" onclick="hideModal()">取消</button>
             <button class="btn btn-primary" onclick="saveGroup()">保存</button>
+        </div>
+    </div>
+</div>
+
+<div id="confirmModal" class="modal-overlay" style="display:none;">
+    <div class="modal" style="width:400px;">
+        <div class="modal-header">
+            <h3 id="confirmTitle">确认操作</h3>
+            <button class="modal-close" onclick="hideConfirm()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div class="confirm-dialog">
+                <p id="confirmMessage" class="confirm-message"></p>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn" onclick="hideConfirm()">取消</button>
+            <button id="confirmBtn" class="btn btn-danger" onclick="executeConfirm()">确定</button>
         </div>
     </div>
 </div>
@@ -153,12 +174,8 @@ function sortBy(field, order) {
     if (existingIndex >= 0) {
         sortOrderList[existingIndex].ascending = !sortOrderList[existingIndex].ascending;
     } else {
-        sortOrderList.push({field: field, ascending: true, order: order});
+        sortOrderList = [{field: field, ascending: true, order: order}];
     }
-    
-    sortOrderList.sort(function(a, b) {
-        return (a.order || 999) - (b.order || 999);
-    });
     
     updateSortIcons();
     loadGroups();
@@ -236,6 +253,11 @@ function showCreateDialog() {
     document.getElementById('formGroupName').value = '';
     document.getElementById('formGroupDesc').value = '';
     document.getElementById('groupModal').style.display = 'flex';
+    setTimeout(function() {
+        if (window.InputClear) {
+            InputClear.init(document.getElementById('groupModal'));
+        }
+    }, 100);
 }
 
 function editGroup(groupNo) {
@@ -250,6 +272,11 @@ function editGroup(groupNo) {
                 document.getElementById('formGroupName').value = g.groupName;
                 document.getElementById('formGroupDesc').value = g.groupDescription || '';
                 document.getElementById('groupModal').style.display = 'flex';
+                setTimeout(function() {
+                    if (window.InputClear) {
+                        InputClear.init(document.getElementById('groupModal'));
+                    }
+                }, 100);
             }
         });
 }
@@ -260,11 +287,15 @@ function saveGroup() {
     var groupCode = document.getElementById('formGroupCode').value;
     var groupName = document.getElementById('formGroupName').value;
     if (!groupCode) { showToast('请输入分组编码','warning'); return; }
+    if (groupCode.length > 64) { showToast('分组编码不能超过64个字符','warning'); return; }
     if (!groupName) { showToast('请输入分组名称','warning'); return; }
+    if (groupName.length > 128) { showToast('分组名称不能超过128个字符','warning'); return; }
+    var groupDesc = document.getElementById('formGroupDesc').value;
+    if (groupDesc.length > 512) { showToast('分组描述不能超过512个字符','warning'); return; }
     var data = {
         groupCode: groupCode,
         groupName: groupName,
-        groupDescription: document.getElementById('formGroupDesc').value
+        groupDescription: groupDesc
     };
     if (editingGroupNo) {
         data.groupNo = editingGroupNo;
@@ -285,13 +316,35 @@ function saveGroup() {
 }
 
 function deleteGroup(groupNo) {
-    if (!confirm('确定要删除该分组吗？')) return;
-    fetch(BASE+'/'+groupNo, {method:'DELETE'})
-        .then(function(r){return r.json();})
-        .then(function(result){
-            if (result.success) { showToast('删除成功','success'); loadGroups(); }
-            else showToast(result.error?.message||'删除失败','error');
-        });
+    showConfirm('删除确认', '确定要删除该分组吗？删除后不可恢复。', function() {
+        fetch(BASE+'/'+groupNo, {method:'DELETE'})
+            .then(function(r){return r.json();})
+            .then(function(result){
+                if (result.success) { showToast('删除成功','success'); loadGroups(); }
+                else showToast(result.error?.message||'删除失败','error');
+            });
+    });
+}
+
+var confirmCallback = null;
+
+function showConfirm(title, message, onConfirm) {
+    document.getElementById('confirmTitle').textContent = title;
+    document.getElementById('confirmMessage').textContent = message;
+    confirmCallback = onConfirm;
+    document.getElementById('confirmModal').style.display = 'flex';
+}
+
+function hideConfirm() {
+    document.getElementById('confirmModal').style.display = 'none';
+    confirmCallback = null;
+}
+
+function executeConfirm() {
+    if (typeof confirmCallback === 'function') {
+        confirmCallback();
+    }
+    hideConfirm();
 }
 
 function showToast(msg, type) {
@@ -303,6 +356,7 @@ function showToast(msg, type) {
 }
 
 document.getElementById('groupModal').addEventListener('click', function(e){ if(e.target===this) hideModal(); });
+document.getElementById('confirmModal').addEventListener('click', function(e){ if(e.target===this) hideConfirm(); });
 
 updateSortIcons();
 loadGroups();

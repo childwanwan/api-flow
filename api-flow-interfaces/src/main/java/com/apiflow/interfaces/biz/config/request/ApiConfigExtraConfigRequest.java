@@ -14,10 +14,7 @@ import java.util.Map;
 @AllArgsConstructor
 public class ApiConfigExtraConfigRequest {
 
-    private String region;
-    private String sellerId;
-    private String awsAccessKey;
-    private String environment;
+    private Map<String, String> envConfig;
     private String targetUrl;
     private String targetMethod;
     private Map<String, String> targetHeaders;
@@ -25,10 +22,12 @@ public class ApiConfigExtraConfigRequest {
     private Integer targetTimeoutMs;
 
     public void validate() {
-        ValidationHelper.validateSize(region, 128, "region");
-        ValidationHelper.validateSize(sellerId, 128, "sellerId");
-        ValidationHelper.validateSize(awsAccessKey, 256, "awsAccessKey");
-        ValidationHelper.validateSize(environment, 64, "environment");
+        if (envConfig != null) {
+            envConfig.forEach((key, value) -> {
+                ValidationHelper.validateSize(key, 128, "envConfig.key");
+                ValidationHelper.validateSize(value, 512, "envConfig.value");
+            });
+        }
         ValidationHelper.validateSize(targetUrl, 2048, "targetUrl");
         if (targetMethod != null) {
             ValidationHelper.validatePattern(targetMethod, "^(GET|POST|PUT|DELETE|PATCH)$", "targetMethod");

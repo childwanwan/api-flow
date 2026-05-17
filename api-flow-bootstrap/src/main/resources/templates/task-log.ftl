@@ -6,7 +6,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>调度日志</title>
     <link rel="stylesheet" href="${request.contextPath}/static/css/common.css">
+    <link rel="stylesheet" href="${request.contextPath}/static/css/input-clear.css">
     <script src="${request.contextPath}/static/js/pagination.js"></script>
+    <script src="${request.contextPath}/static/js/input-clear.js"></script>
+    <script src="${request.contextPath}/static/js/common.js"></script>
 </head>
 <body class="iframe-body">
 <div class="iframe-content">

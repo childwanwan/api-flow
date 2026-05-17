@@ -6,7 +6,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>用户管理</title>
     <link rel="stylesheet" href="${request.contextPath}/static/css/common.css">
+    <link rel="stylesheet" href="${request.contextPath}/static/css/input-clear.css">
     <script src="${request.contextPath}/static/js/pagination.js"></script>
+    <script src="${request.contextPath}/static/js/input-clear.js"></script>
+    <script src="${request.contextPath}/static/js/common.js"></script>
 </head>
 <body class="iframe-body">
 <div class="iframe-content">
@@ -101,6 +104,7 @@ function showAddDialog() {
     document.querySelector('input[name=formRole][value=USER]').checked=true;
     document.querySelector('input[name=formUserStatus][value=ENABLED]').checked=true;
     document.getElementById('userModal').style.display='flex';
+    setTimeout(function(){ if(window.InputClear) InputClear.init(document.getElementById('userModal')); }, 100);
 }
 function showEditDialog(id) {
     fetch(BASE+'/'+id).then(function(r){return r.json();}).then(function(data){
@@ -116,6 +120,7 @@ function showEditDialog(id) {
             var statusRadio=document.querySelector('input[name=formUserStatus][value='+data.data.status+']');
             if(statusRadio) statusRadio.checked=true;
             document.getElementById('userModal').style.display='flex';
+            setTimeout(function(){ if(window.InputClear) InputClear.init(document.getElementById('userModal')); }, 100);
         }
     });
 }

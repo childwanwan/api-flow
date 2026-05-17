@@ -10,8 +10,11 @@ public record GroupEventMessage(
         String groupName,
         String groupDescription,
         String operator,
-        String oldGroupCode,
-        String oldGroupName,
-        String oldGroupDescription
+        GroupEventMessage.Snapshot snapshot
 ) {
+    public record Snapshot(
+            String groupCode,
+            String groupName,
+            String groupDescription
+    ) {}
 }
