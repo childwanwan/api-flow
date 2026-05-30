@@ -2,13 +2,23 @@ package com.apiflow.interfaces.biz.plugin;
 
 import com.apiflow.api.repository.plugin.idto.PluginConfigIDTO;
 import com.apiflow.application.plugin.PluginConfigApplicationService;
+import com.apiflow.application.plugin.param.CreatePluginConfigParam;
+import com.apiflow.application.plugin.param.DeletePluginConfigParam;
+import com.apiflow.application.plugin.param.DisablePluginConfigParam;
+import com.apiflow.application.plugin.param.EnablePluginConfigParam;
+import com.apiflow.application.plugin.param.GetPluginConfigParam;
+import com.apiflow.application.plugin.param.ListPluginConfigParam;
+import com.apiflow.application.plugin.param.UpdatePluginConfigParam;
 import com.apiflow.common.result.Result;
+import com.apiflow.interfaces.biz.plugin.converter.PluginConfigConverter;
+import com.apiflow.interfaces.biz.plugin.vo.PluginConfigVO;
+import com.apiflow.interfaces.biz.plugin.request.PluginConfigCreateRequest;
+import com.apiflow.interfaces.biz.plugin.request.PluginConfigUpdateRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Map;
 
 @Slf4j
 @RestController
@@ -16,64 +26,84 @@ import java.util.Map;
 @RequestMapping("/api/v1/plugin")
 public class PluginConfigController {
 
+    private static final PluginConfigConverter PLUGIN_CONVERTER = PluginConfigConverter.INSTANCE;
+
     private final PluginConfigApplicationService pluginConfigApplicationService;
 
     @PostMapping("/create")
-    public Result<PluginConfigIDTO> createPlugin(@RequestBody Map<String, Object> request) {
-        String pluginCode = (String) request.get("pluginCode");
-        String pluginName = (String) request.get("pluginName");
-        String pluginClass = (String) request.get("pluginClass");
-        String description = (String) request.get("description");
-        String config = request.get("config") != null ? request.get("config").toString() : null;
-        Boolean enabled = request.get("enabled") != null ? (Boolean) request.get("enabled") : true;
-        Integer orderNum = request.get("orderNum") != null ? ((Number) request.get("orderNum")).intValue() : 0;
-        PluginConfigIDTO plugin = pluginConfigApplicationService.createPlugin(
-                pluginCode, pluginName, pluginClass, description, config, enabled, orderNum);
-        return Result.success(plugin);
+    public Result<PluginConfigVO> createPlugin(@RequestBody PluginConfigCreateRequest request) {
+        CreatePluginConfigParam param = CreatePluginConfigParam.builder()
+                .pluginCode(request.getPluginCode())
+                .pluginName(request.getPluginName())
+                .pluginClass(request.getPluginClass())
+                .description(request.getDescription())
+                .config(request.getConfig())
+                .enabled(request.getEnabled())
+                .orderNum(request.getOrderNum())
+                .build();
+        PluginConfigIDTO plugin = pluginConfigApplicationService.createPlugin(param);
+        return Result.success(PLUGIN_CONVERTER.toVO(plugin));
     }
 
     @PutMapping("/update")
-    public Result<PluginConfigIDTO> updatePlugin(@RequestBody Map<String, Object> request) {
-        String pluginCode = (String) request.get("pluginCode");
-        String pluginName = (String) request.get("pluginName");
-        String pluginClass = (String) request.get("pluginClass");
-        String description = (String) request.get("description");
-        String config = request.get("config") != null ? request.get("config").toString() : null;
-        Boolean enabled = request.get("enabled") != null ? (Boolean) request.get("enabled") : null;
-        Integer orderNum = request.get("orderNum") != null ? ((Number) request.get("orderNum")).intValue() : null;
-        PluginConfigIDTO plugin = pluginConfigApplicationService.updatePlugin(
-                pluginCode, pluginName, pluginClass, description, config, enabled, orderNum);
-        return Result.success(plugin);
+    public Result<PluginConfigVO> updatePlugin(@RequestBody PluginConfigUpdateRequest request) {
+        UpdatePluginConfigParam param = UpdatePluginConfigParam.builder()
+                .pluginCode(request.getPluginCode())
+                .pluginName(request.getPluginName())
+                .pluginClass(request.getPluginClass())
+                .description(request.getDescription())
+                .config(request.getConfig())
+                .enabled(request.getEnabled())
+                .orderNum(request.getOrderNum())
+                .build();
+        PluginConfigIDTO plugin = pluginConfigApplicationService.updatePlugin(param);
+        return Result.success(PLUGIN_CONVERTER.toVO(plugin));
     }
 
     @GetMapping("/{pluginCode}")
-    public Result<PluginConfigIDTO> getPlugin(@PathVariable String pluginCode) {
-        PluginConfigIDTO plugin = pluginConfigApplicationService.getPlugin(pluginCode);
-        return Result.success(plugin);
+    public Result<PluginConfigVO> getPlugin(@PathVariable String pluginCode) {
+        GetPluginConfigParam param = GetPluginConfigParam.builder()
+                .pluginCode(pluginCode)
+                .build();
+        PluginConfigIDTO plugin = pluginConfigApplicationService.getPlugin(param);
+        return Result.success(PLUGIN_CONVERTER.toVO(plugin));
     }
 
     @GetMapping("/list")
-    public Result<List<PluginConfigIDTO>> listPlugins(@RequestParam(required = false) String pluginCode,
+    public Result<List<PluginConfigVO>> listPlugins(@RequestParam(required = false) String pluginCode,
                                                        @RequestParam(required = false) String pluginName) {
-        List<PluginConfigIDTO> plugins = pluginConfigApplicationService.listPlugins(pluginCode, pluginName);
-        return Result.success(plugins);
+        ListPluginConfigParam param = ListPluginConfigParam.builder()
+                .pluginCode(pluginCode)
+                .pluginName(pluginName)
+                .build();
+        List<PluginConfigIDTO> plugins = pluginConfigApplicationService.listPlugins(param);
+        return Result.success(PLUGIN_CONVERTER.toVOList(plugins));
     }
 
     @DeleteMapping("/{pluginCode}")
-    public Result<String> deletePlugin(@PathVariable String pluginCode) {
-        pluginConfigApplicationService.deletePlugin(pluginCode);
-        return Result.success("删除成功");
+    public Result<Void> deletePlugin(@PathVariable String pluginCode) {
+        DeletePluginConfigParam param = DeletePluginConfigParam.builder()
+                .pluginCode(pluginCode)
+                .build();
+        pluginConfigApplicationService.deletePlugin(param);
+        return Result.success();
     }
 
     @PostMapping("/{pluginCode}/enable")
-    public Result<PluginConfigIDTO> enablePlugin(@PathVariable String pluginCode) {
-        PluginConfigIDTO plugin = pluginConfigApplicationService.enablePlugin(pluginCode);
-        return Result.success(plugin);
+    public Result<PluginConfigVO> enablePlugin(@PathVariable String pluginCode) {
+        EnablePluginConfigParam param = EnablePluginConfigParam.builder()
+                .pluginCode(pluginCode)
+                .build();
+        PluginConfigIDTO plugin = pluginConfigApplicationService.enablePlugin(param);
+        return Result.success(PLUGIN_CONVERTER.toVO(plugin));
     }
 
     @PostMapping("/{pluginCode}/disable")
-    public Result<PluginConfigIDTO> disablePlugin(@PathVariable String pluginCode) {
-        PluginConfigIDTO plugin = pluginConfigApplicationService.disablePlugin(pluginCode);
-        return Result.success(plugin);
+    public Result<PluginConfigVO> disablePlugin(@PathVariable String pluginCode) {
+        DisablePluginConfigParam param = DisablePluginConfigParam.builder()
+                .pluginCode(pluginCode)
+                .build();
+        PluginConfigIDTO plugin = pluginConfigApplicationService.disablePlugin(param);
+        return Result.success(PLUGIN_CONVERTER.toVO(plugin));
     }
 }

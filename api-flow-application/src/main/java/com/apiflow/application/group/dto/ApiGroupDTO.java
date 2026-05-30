@@ -19,4 +19,5 @@ public class ApiGroupDTO {
     private Long updateTimeMs;
     private String createOperator;
     private String updateOperator;
+    private Integer apiCount;
 }

@@ -12,6 +12,8 @@ import lombok.NoArgsConstructor;
 public class ApiConfigVO {
     private Long id;
     private String groupNo;
+    private String groupCode;
+    private String groupName;
     private String apiCode;
     private String apiName;
     private String apiDescription;

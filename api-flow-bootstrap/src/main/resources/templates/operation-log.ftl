@@ -7,9 +7,11 @@
     <title>操作日志</title>
     <link rel="stylesheet" href="${request.contextPath}/static/css/common.css">
     <link rel="stylesheet" href="${request.contextPath}/static/css/input-clear.css">
+    <link rel="stylesheet" href="${request.contextPath}/static/css/resizable-columns.css">
     <script src="${request.contextPath}/static/js/pagination.js"></script>
     <script src="${request.contextPath}/static/js/input-clear.js"></script>
     <script src="${request.contextPath}/static/js/common.js"></script>
+    <script src="${request.contextPath}/static/js/resizable-columns.js"></script>
     <style>
         .sortable { cursor: pointer; user-select: none; }
         .sortable:hover { background-color: #f5f5f5; }
@@ -175,6 +177,7 @@ function resetSearch() {
 
 updateSortIcons();
 loadLogs();
+ResizableColumns.init(document.querySelector('.data-table'), {pageKey: '/operation-log'});
 </script>
 </body>
 </html>

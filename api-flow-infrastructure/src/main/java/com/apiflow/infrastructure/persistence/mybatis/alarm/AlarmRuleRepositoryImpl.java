@@ -1,20 +1,27 @@
 package com.apiflow.infrastructure.persistence.mybatis.alarm;
 
+import cn.hutool.core.collection.CollUtil;
+import cn.hutool.core.util.ObjectUtil;
 import com.apiflow.api.repository.alarm.AlarmRuleRepository;
 import com.apiflow.api.repository.alarm.idto.AlarmRuleIDTO;
+import com.apiflow.api.repository.alarm.param.AlarmRuleField;
 import com.apiflow.api.repository.alarm.param.SaveAlarmRuleParam;
 import com.apiflow.api.repository.alarm.param.SelectAlarmRuleParam;
+import com.apiflow.api.repository.alarm.param.SelectOneAlarmRuleParam;
 import com.apiflow.api.repository.alarm.param.UpdateAlarmRuleParam;
+import com.apiflow.common.exception.BusinessException;
+import com.apiflow.common.exception.ErrorCode;
+import com.apiflow.infrastructure.persistence.mybatis.alarm.converter.AlarmRuleConverter;
 import com.apiflow.infrastructure.persistence.mybatis.alarm.entity.AlarmRulePO;
 import com.apiflow.infrastructure.persistence.mybatis.util.QueryConditionHelper;
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.stream.Collectors;
 
-import static com.apiflow.infrastructure.persistence.mybatis.util.QueryConditionHelper.createSimpleFieldResolver;
+import static com.apiflow.infrastructure.persistence.mybatis.util.QueryConditionHelper.createFieldResolver;
 
 @Repository
 @RequiredArgsConstructor
@@ -23,69 +30,66 @@ public class AlarmRuleRepositoryImpl implements AlarmRuleRepository {
     private final AlarmRuleMapper alarmRuleMapper;
 
     @Override
-    public AlarmRuleIDTO save(SaveAlarmRuleParam param) {
-        AlarmRulePO po = AlarmRulePO.builder()
-                .ruleName(param.getRuleName())
-                .alarmType(param.getAlarmType())
-                .triggerCondition(param.getTriggerCondition())
-                .level(param.getLevel())
-                .enabled(param.getEnabled())
-                .createTimeMs(param.getCreateTimeMs())
-                .updateTimeMs(param.getUpdateTimeMs())
-                .build();
+    public void save(SaveAlarmRuleParam param) {
+        AlarmRulePO po = AlarmRuleConverter.INSTANCE.saveParamToPO(param);
         alarmRuleMapper.insert(po);
-        return toIDTO(po);
     }
 
     @Override
-    public AlarmRuleIDTO update(UpdateAlarmRuleParam param) {
-        AlarmRulePO po = alarmRuleMapper.selectById(param.getId());
-        if (po == null) return null;
-        if (param.getRuleName() != null) po.setRuleName(param.getRuleName());
-        if (param.getAlarmType() != null) po.setAlarmType(param.getAlarmType());
-        if (param.getTriggerCondition() != null) po.setTriggerCondition(param.getTriggerCondition());
-        if (param.getLevel() != null) po.setLevel(param.getLevel());
-        if (param.getEnabled() != null) po.setEnabled(param.getEnabled());
-        if (param.getUpdateTimeMs() != null) po.setUpdateTimeMs(param.getUpdateTimeMs());
-        alarmRuleMapper.updateById(po);
-        return toIDTO(po);
+    public void update(UpdateAlarmRuleParam param) {
+        AlarmRulePO po = AlarmRuleConverter.INSTANCE.updateParamToPO(param);
+        QueryWrapper<AlarmRulePO> wrapper = new QueryWrapper<>();
+        wrapper.eq("id", param.getId()).last("LIMIT 1");
+        alarmRuleMapper.update(po, wrapper);
     }
 
     @Override
     public AlarmRuleIDTO selectById(Long id) {
         AlarmRulePO po = alarmRuleMapper.selectById(id);
-        return po != null ? toIDTO(po) : null;
+        return po != null ? AlarmRuleConverter.INSTANCE.poToIDTO(po) : null;
+    }
+
+    @Override
+    public AlarmRuleIDTO selectOne(SelectOneAlarmRuleParam param) {
+        if (ObjectUtil.isEmpty(param) || param.isEmpty()) {
+            throw new BusinessException(ErrorCode.PARAM_IS_EMPTY);
+        }
+        QueryWrapper<AlarmRulePO> wrapper = new QueryWrapper<>();
+        if (CollUtil.isNotEmpty(param.getSelectFields())) {
+            QueryConditionHelper.applySelectFields(wrapper, param.getSelectFields());
+        }
+        QueryConditionHelper.applyFieldCondition(wrapper, AlarmRuleField.ALARM_TYPE.getColumnName(), param.getAlarmType());
+        QueryConditionHelper.applyFieldCondition(wrapper, AlarmRuleField.ENABLED.getColumnName(), param.getEnabled());
+        QueryConditionHelper.applyConditions(wrapper, param.getConditions());
+        QueryConditionHelper.applyConditionNode(wrapper, param.getCondition(), createFieldResolver(AlarmRuleField.values()));
+        wrapper.orderByDesc("id").last("LIMIT 1");
+        List<AlarmRulePO> list = alarmRuleMapper.selectList(wrapper);
+        if (CollUtil.isEmpty(list)) {
+            return null;
+        }
+        return AlarmRuleConverter.INSTANCE.poToIDTO(list.get(0));
     }
 
     @Override
     public List<AlarmRuleIDTO> selectList(SelectAlarmRuleParam param) {
-        LambdaQueryWrapper<AlarmRulePO> wrapper = new LambdaQueryWrapper<>();
-        QueryConditionHelper.applyFieldCondition(wrapper, AlarmRulePO::getAlarmType, param.getAlarmType());
-        QueryConditionHelper.applyFieldCondition(wrapper, AlarmRulePO::getEnabled, param.getEnabled());
-        QueryConditionHelper.applyConditionNode(wrapper, param.getCondition(), createSimpleFieldResolver());
-        wrapper.orderByDesc(AlarmRulePO::getCreateTimeMs);
-        if (param.getLimit() != null) {
-            wrapper.last("LIMIT " + param.getLimit());
+        if (ObjectUtil.isEmpty(param)) {
+            throw new BusinessException(ErrorCode.PARAM_IS_EMPTY);
         }
+        QueryWrapper<AlarmRulePO> wrapper = new QueryWrapper<>();
+        QueryConditionHelper.applyFieldCondition(wrapper, AlarmRuleField.ALARM_TYPE.getColumnName(), param.getAlarmType());
+        QueryConditionHelper.applyFieldCondition(wrapper, AlarmRuleField.ENABLED.getColumnName(), param.getEnabled());
+        QueryConditionHelper.applyConditionNode(wrapper, param.getCondition(), createFieldResolver(AlarmRuleField.values()));
+        wrapper.orderByDesc(AlarmRuleField.CREATE_TIME_MS.getColumnName());
+        wrapper.last("LIMIT " + param.getEffectiveLimit());
         List<AlarmRulePO> list = alarmRuleMapper.selectList(wrapper);
-        return list.stream().map(this::toIDTO).collect(Collectors.toList());
+        return list.stream().map(AlarmRuleConverter.INSTANCE::poToIDTO).collect(Collectors.toList());
     }
 
     @Override
-    public long delete(Long id) {
-        return alarmRuleMapper.deleteById(id);
-    }
-
-    private AlarmRuleIDTO toIDTO(AlarmRulePO po) {
-        return AlarmRuleIDTO.builder()
-                .id(po.getId())
-                .ruleName(po.getRuleName())
-                .alarmType(po.getAlarmType())
-                .triggerCondition(po.getTriggerCondition())
-                .level(po.getLevel())
-                .enabled(po.getEnabled())
-                .createTimeMs(po.getCreateTimeMs())
-                .updateTimeMs(po.getUpdateTimeMs())
-                .build();
+    public void deleteList(List<Long> idList) {
+        if (CollUtil.isEmpty(idList)) {
+            return;
+        }
+        alarmRuleMapper.deleteByIds(idList);
     }
 }

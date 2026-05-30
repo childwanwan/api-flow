@@ -1,10 +1,12 @@
 package com.apiflow.domain.shared.event;
 
-import com.apiflow.domain.shared.model.AggregateRoot;
+import com.apiflow.api.mq.IntegrationEvent;
+
+import java.util.List;
 
 public interface DomainEventPublisher {
 
-    void publishAll(AggregateRoot aggregate);
+    void publishAll(List<IntegrationEvent> events);
 
-    void publish(DomainEvent event);
+    void publish(IntegrationEvent event);
 }

@@ -23,4 +23,6 @@ public class ApiGroupVO {
     
     private Long updateTimeMs;
 
+    private Integer apiCount;
+
 }

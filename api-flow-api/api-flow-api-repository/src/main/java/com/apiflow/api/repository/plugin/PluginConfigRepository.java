@@ -10,9 +10,11 @@ import java.util.List;
 
 public interface PluginConfigRepository {
 
-    PluginConfigIDTO save(SavePluginConfigParam param);
+    PluginConfigIDTO findByPluginCode(String pluginCode);
 
-    PluginConfigIDTO update(UpdatePluginConfigParam param);
+    void save(SavePluginConfigParam param);
+
+    void update(UpdatePluginConfigParam param);
 
     PluginConfigIDTO selectOne(SelectOnePluginConfigParam param);
 

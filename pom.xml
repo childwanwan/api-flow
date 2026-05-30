@@ -72,6 +72,11 @@
             </dependency>
             <dependency>
                 <groupId>com.apiflow</groupId>
+                <artifactId>api-flow-api-async</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.apiflow</groupId>
                 <artifactId>api-flow-domain</artifactId>
                 <version>${project.version}</version>
             </dependency>

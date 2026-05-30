@@ -2,10 +2,10 @@ package com.apiflow.interfaces.biz.group.converter;
 
 import com.apiflow.api.repository.group.idto.ApiGroupIDTO;
 import com.apiflow.application.group.dto.ApiGroupDTO;
-import com.apiflow.application.group.param.ApiGroupCreateParam;
-import com.apiflow.application.group.param.ApiGroupListParam;
-import com.apiflow.application.group.param.ApiGroupPageParam;
-import com.apiflow.application.group.param.ApiGroupUpdateParam;
+import com.apiflow.application.group.param.CreateApiGroupParam;
+import com.apiflow.application.group.param.ListApiGroupParam;
+import com.apiflow.application.group.param.PageApiGroupParam;
+import com.apiflow.application.group.param.UpdateApiGroupParam;
 import com.apiflow.common.result.PageResult;
 import com.apiflow.interfaces.biz.group.request.ApiGroupCreateRequest;
 import com.apiflow.interfaces.biz.group.request.ApiGroupListRequest;
@@ -26,11 +26,19 @@ public interface ApiGroupConverter {
 
     ApiGroupVO toVO(ApiGroupDTO dto);
 
-    ApiGroupPageParam apiGroupPageRequest2ApiGroupPageParam(ApiGroupPageRequest request);
+    PageApiGroupParam apiGroupPageRequest2ApiGroupPageParam(ApiGroupPageRequest request);
 
-    PageResult<ApiGroupVO> apiGroupDTOPage2VO(PageResult<ApiGroupDTO> pageResult);
+    default PageResult<ApiGroupVO> apiGroupDTOPage2VO(PageResult<ApiGroupDTO> pageResult) {
+        if (pageResult == null) {
+            return null;
+        }
+        List<ApiGroupVO> voList = pageResult.getRecords().stream()
+                .map(this::toVO)
+                .toList();
+        return PageResult.of(voList, pageResult.getTotal(), pageResult.getCurrent(), pageResult.getSize());
+    }
 
-    ApiGroupListParam apiGroupListRequest2ApiGroupListParam(ApiGroupListRequest request);
+    ListApiGroupParam apiGroupListRequest2ApiGroupListParam(ApiGroupListRequest request);
 
     ApiGroupListVO toListVO(ApiGroupDTO dto);
 
@@ -40,12 +48,12 @@ public interface ApiGroupConverter {
     @Mapping(source = "request.groupName", target = "groupName")
     @Mapping(source = "request.groupDescription", target = "groupDescription")
     @Mapping(source = "operator", target = "operator")
-    ApiGroupCreateParam toCreateParam(ApiGroupCreateRequest request, String operator);
+    CreateApiGroupParam toCreateParam(ApiGroupCreateRequest request, String operator);
 
     @Mapping(source = "request.groupNo", target = "groupNo")
     @Mapping(source = "request.groupCode", target = "groupCode")
     @Mapping(source = "request.groupName", target = "groupName")
     @Mapping(source = "request.groupDescription", target = "groupDescription")
     @Mapping(source = "operator", target = "operator")
-    ApiGroupUpdateParam toUpdateParam(ApiGroupUpdateRequest request, String operator);
+    UpdateApiGroupParam toUpdateParam(ApiGroupUpdateRequest request, String operator);
 }

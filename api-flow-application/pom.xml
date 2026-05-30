@@ -27,6 +27,14 @@
             <artifactId>api-flow-api-cache</artifactId>
         </dependency>
         <dependency>
+            <groupId>com.apiflow</groupId>
+            <artifactId>api-flow-api-async</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.apiflow</groupId>
+            <artifactId>api-flow-api-mq</artifactId>
+        </dependency>
+        <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter</artifactId>
         </dependency>

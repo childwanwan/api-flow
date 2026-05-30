@@ -1,23 +1,37 @@
 package com.apiflow.domain.config.model;
 
+import cn.hutool.core.util.ObjectUtil;
 import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.Getter;
 
 import java.util.Map;
+import java.util.Objects;
 
-@Data
-@Builder
-@NoArgsConstructor
+@Getter
 @AllArgsConstructor
 public class ExtraConfig {
 
-    private Map<String, String> envConfig;
+    private final Map<String, String> envConfig;
+    private final String targetUrl;
+    private final String targetMethod;
+    private final Map<String, String> targetHeaders;
+    private final String targetBodyTemplate;
+    private final Integer targetTimeoutMs;
 
-    private String targetUrl;
-    private String targetMethod;
-    private Map<String, String> targetHeaders;
-    private String targetBodyTemplate;
-    private Integer targetTimeoutMs;
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof ExtraConfig other)) return false;
+        return ObjectUtil.equal(envConfig, other.envConfig)
+                && ObjectUtil.equal(targetUrl, other.targetUrl)
+                && ObjectUtil.equal(targetMethod, other.targetMethod)
+                && ObjectUtil.equal(targetHeaders, other.targetHeaders)
+                && ObjectUtil.equal(targetBodyTemplate, other.targetBodyTemplate)
+                && ObjectUtil.equal(targetTimeoutMs, other.targetTimeoutMs);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(envConfig, targetUrl, targetMethod, targetHeaders, targetBodyTemplate, targetTimeoutMs);
+    }
 }

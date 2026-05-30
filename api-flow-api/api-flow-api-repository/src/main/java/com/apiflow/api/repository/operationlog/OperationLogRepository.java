@@ -2,6 +2,7 @@ package com.apiflow.api.repository.operationlog;
 
 import com.apiflow.api.repository.operationlog.idto.OperationLogIDTO;
 import com.apiflow.api.repository.operationlog.param.SaveOperationLogParam;
+import com.apiflow.api.repository.operationlog.param.SelectOneOperationLogParam;
 import com.apiflow.api.repository.operationlog.param.SelectOperationLogParam;
 import com.apiflow.api.repository.operationlog.param.SelectPageOperationLogParam;
 import com.apiflow.common.result.PageResult;
@@ -10,7 +11,9 @@ import java.util.List;
 
 public interface OperationLogRepository {
 
-    OperationLogIDTO save(SaveOperationLogParam param);
+    void save(SaveOperationLogParam param);
+
+    OperationLogIDTO selectOne(SelectOneOperationLogParam param);
 
     List<OperationLogIDTO> selectList(SelectOperationLogParam param);
 

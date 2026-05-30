@@ -1,6 +1,7 @@
 package com.apiflow.application.group;
 
 import cn.hutool.core.util.ObjectUtil;
+import com.apiflow.api.repository.config.ApiConfigRepository;
 import com.apiflow.api.repository.group.ApiGroupRepository;
 import com.apiflow.api.repository.group.idto.ApiGroupIDTO;
 import com.apiflow.api.repository.group.param.ApiGroupField;
@@ -11,6 +12,7 @@ import com.apiflow.application.LockHelper;
 import com.apiflow.application.group.converter.ApiGroupConverter;
 import com.apiflow.application.group.dto.ApiGroupDTO;
 import com.apiflow.application.group.param.*;
+import com.apiflow.application.shared.event.DomainEventConverterFacade;
 import com.apiflow.common.constant.LockPrefix;
 import com.apiflow.common.exception.BusinessException;
 import com.apiflow.common.exception.ErrorCode;
@@ -25,8 +27,10 @@ import com.apiflow.domain.shared.event.DomainEventPublisher;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.util.List;
+import java.util.Map;
 
 @Slf4j
 @Service
@@ -39,11 +43,14 @@ public class ApiGroupApplicationService {
 
     private final ApiGroupDomainService apiGroupDomainService;
     private final ApiGroupRepository apiGroupRepository;
+    private final ApiConfigRepository apiConfigRepository;
     private final DomainEventPublisher domainEventPublisher;
+    private final DomainEventConverterFacade domainEventConverterFacade;
     private final LockHelper lockHelper;
+    private final TransactionTemplate transactionTemplate;
 
-    public ApiGroupDTO createGroup(ApiGroupCreateParam param) {
-        return lockHelper.execute(LOCK_PREFIX, param.getGroupCode(), () -> {
+    public void createGroup(CreateApiGroupParam param) {
+        lockHelper.executeVoid(LOCK_PREFIX, param.getGroupCode(), () -> {
             CreateApiGroupCommand command = CreateApiGroupCommand.builder()
                     .groupCode(param.getGroupCode())
                     .groupName(param.getGroupName())
@@ -51,14 +58,15 @@ public class ApiGroupApplicationService {
                     .operator(param.getOperator())
                     .build();
             ApiGroup group = apiGroupDomainService.create(command);
-            apiGroupRepository.save(CONVERTER.toSaveParam(group));
-            domainEventPublisher.publishAll(group);
-            return toDTO(group);
+            transactionTemplate.executeWithoutResult(status -> {
+                apiGroupRepository.save(CONVERTER.toSaveParam(group));
+            });
+            domainEventPublisher.publishAll(domainEventConverterFacade.convert(group));
         });
     }
 
-    public ApiGroupDTO updateGroup(ApiGroupUpdateParam param) {
-        return lockHelper.execute(LOCK_PREFIX, param.getGroupNo(), () -> {
+    public void updateGroup(UpdateApiGroupParam param) {
+        lockHelper.executeVoid(LOCK_PREFIX, param.getGroupNo(), () -> {
             UpdateApiGroupCommand command = UpdateApiGroupCommand.builder()
                     .groupNo(param.getGroupNo())
                     .groupCode(param.getGroupCode())
@@ -67,13 +75,14 @@ public class ApiGroupApplicationService {
                     .operator(param.getOperator())
                     .build();
             ApiGroup group = apiGroupDomainService.update(command);
-            apiGroupRepository.update(CONVERTER.toUpdateParam(group));
-            domainEventPublisher.publishAll(group);
-            return toDTO(group);
+            transactionTemplate.executeWithoutResult(status -> {
+                apiGroupRepository.update(CONVERTER.toUpdateParam(group));
+            });
+            domainEventPublisher.publishAll(domainEventConverterFacade.convert(group));
         });
     }
 
-    public ApiGroupDTO getGroup(ApiGroupGetParam param) {
+    public ApiGroupDTO getGroup(GetApiGroupParam param) {
         SelectOneApiGroupParam queryParam = SelectOneApiGroupParam.builder()
                 .condition(ConditionNode.eq(ApiGroupField.GROUP_NO.getFieldName(), param.getGroupNo()))
                 .selectFields(List.of(ApiGroupField.GROUP_NO,
@@ -89,42 +98,57 @@ public class ApiGroupApplicationService {
         return CONVERTER.apiGroupIDTO2ApiGroupDTO(idto);
     }
 
-    public void deleteGroup(ApiGroupDeleteParam param) {
+    public void deleteGroup(DeleteApiGroupParam param) {
         lockHelper.executeVoid(LOCK_PREFIX, param.getGroupNo(), () -> {
             DeleteApiGroupCommand command = DeleteApiGroupCommand.builder()
                     .groupNo(param.getGroupNo())
                     .operator(param.getOperator())
                     .build();
             ApiGroup group = apiGroupDomainService.delete(command);
-            apiGroupRepository.deleteList(List.of(group.getId()));
-            domainEventPublisher.publishAll(group);
+            transactionTemplate.executeWithoutResult(status -> {
+                apiGroupRepository.deleteList(List.of(group.getId()));
+            });
+            domainEventPublisher.publishAll(domainEventConverterFacade.convert(group));
         });
     }
 
-    public PageResult<ApiGroupDTO> pageGroups(ApiGroupPageParam param) {
+    public PageResult<ApiGroupDTO> pageGroups(PageApiGroupParam param) {
         SelectPageApiGroupParam queryParam = CONVERTER.apiGroupPageParam2SelectPageApiGroupParam(param);
         PageResult<ApiGroupIDTO> page = apiGroupRepository.selectPage(queryParam);
-        return PageResult.of(CONVERTER.apiGroupIDTO2ApiGroupDTOList(page.getRecords()),
+        List<ApiGroupDTO> dtoList = CONVERTER.apiGroupIDTO2ApiGroupDTOList(page.getRecords());
+
+        List<String> groupNos = dtoList.stream()
+                .map(ApiGroupDTO::getGroupNo)
+                .filter(ObjectUtil::isNotEmpty)
+                .distinct()
+                .toList();
+        List<ApiGroupDTO> dtoListWithCount = dtoList;
+        if (!groupNos.isEmpty()) {
+            Map<String, Integer> countMap = apiConfigRepository.countByGroupNos(groupNos);
+            dtoListWithCount = dtoList.stream()
+                    .map(dto -> ApiGroupDTO.builder()
+                            .id(dto.getId())
+                            .groupNo(dto.getGroupNo())
+                            .groupCode(dto.getGroupCode())
+                            .groupName(dto.getGroupName())
+                            .groupDescription(dto.getGroupDescription())
+                            .createTimeMs(dto.getCreateTimeMs())
+                            .updateTimeMs(dto.getUpdateTimeMs())
+                            .createOperator(dto.getCreateOperator())
+                            .updateOperator(dto.getUpdateOperator())
+                            .apiCount(countMap.getOrDefault(dto.getGroupNo(), 0))
+                            .build())
+                    .toList();
+        }
+
+        return PageResult.of(dtoListWithCount,
                 page.getTotal(), param.getEffectiveCurrent(), param.getEffectiveSize());
     }
 
-    public List<ApiGroupDTO> listGroups(ApiGroupListParam param) {
+    public List<ApiGroupDTO> listGroups(ListApiGroupParam param) {
         SelectApiGroupParam queryParam = CONVERTER.apiGroupListParam2SelectApiGroupParam(param);
         List<ApiGroupIDTO> list = apiGroupRepository.selectList(queryParam);
         return CONVERTER.apiGroupIDTO2ApiGroupDTOList(list);
     }
 
-    private ApiGroupDTO toDTO(ApiGroup group) {
-        return ApiGroupDTO.builder()
-                .id(group.getId())
-                .groupNo(group.getGroupNo())
-                .groupCode(group.getGroupCode())
-                .groupName(group.getGroupName())
-                .groupDescription(group.getGroupDescription())
-                .createTimeMs(group.getCreateTimeMs())
-                .updateTimeMs(group.getUpdateTimeMs())
-                .createOperator(group.getCreateOperator())
-                .updateOperator(group.getUpdateOperator())
-                .build();
-    }
 }

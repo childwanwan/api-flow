@@ -14,26 +14,26 @@ public interface TaskConverter {
 
     TaskConverter INSTANCE = Mappers.getMapper(TaskConverter.class);
 
-    @Named("taskIDTOToTaskDO")
+    @Named("taskIDTOToTask")
     @Mapping(target = "requestContext", qualifiedByName = "requestContextIDTOToDomain")
     @Mapping(target = "execInfo", qualifiedByName = "execInfoIDTOToDomain")
     @Mapping(target = "receiptConfig", qualifiedByName = "receiptConfigIDTOToDomain")
     @Mapping(target = "receiptInfo", qualifiedByName = "receiptInfoIDTOToDomain")
-    TaskDO taskIDTOToTaskDO(TaskIDTO taskIDTO);
+    Task taskIDTOToTask(TaskIDTO taskIDTO);
 
-    @Named("taskDOToSaveTaskParam")
+    @Named("taskToSaveTaskParam")
     @Mapping(target = "requestContext", qualifiedByName = "requestContextToSaveParam")
     @Mapping(target = "execInfo", qualifiedByName = "execInfoToSaveParam")
     @Mapping(target = "receiptConfig", qualifiedByName = "receiptConfigToSaveParam")
     @Mapping(target = "receiptInfo", qualifiedByName = "receiptInfoToSaveParam")
-    SaveTaskParam taskDOToSaveTaskParam(TaskDO taskDO);
+    SaveTaskParam taskToSaveTaskParam(Task task);
 
-    @Named("taskDOToUpdateTaskParam")
+    @Named("taskToUpdateTaskParam")
     @Mapping(target = "requestContext", qualifiedByName = "requestContextToUpdateParam")
     @Mapping(target = "execInfo", qualifiedByName = "execInfoToUpdateParam")
     @Mapping(target = "receiptConfig", qualifiedByName = "receiptConfigToUpdateParam")
     @Mapping(target = "receiptInfo", qualifiedByName = "receiptInfoToUpdateParam")
-    UpdateTaskParam taskDOToUpdateTaskParam(TaskDO taskDO);
+    UpdateTaskParam taskToUpdateTaskParam(Task task);
 
     @Named("requestContextIDTOToDomain")
     RequestContext requestContextIDTOToDomain(TaskRequestContextIDTO dto);

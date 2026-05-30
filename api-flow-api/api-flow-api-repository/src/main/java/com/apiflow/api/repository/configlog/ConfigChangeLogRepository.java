@@ -8,7 +8,7 @@ import java.util.List;
 
 public interface ConfigChangeLogRepository {
 
-    ConfigChangeLogIDTO save(SaveConfigChangeLogParam param);
+    void save(SaveConfigChangeLogParam param);
 
     List<ConfigChangeLogIDTO> selectList(SelectConfigChangeLogParam param);
 

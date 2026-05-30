@@ -8,9 +8,13 @@ import java.util.List;
 
 public interface ApiGroupRepository {
 
-    ApiGroupIDTO save(SaveApiGroupParam param);
+    ApiGroupIDTO findByGroupCode(String groupCode);
 
-    ApiGroupIDTO update(UpdateApiGroupParam param);
+    ApiGroupIDTO findByGroupNo(String groupNo);
+
+    void save(SaveApiGroupParam param);
+
+    void update(UpdateApiGroupParam param);
 
     ApiGroupIDTO selectOne(SelectOneApiGroupParam param);
 

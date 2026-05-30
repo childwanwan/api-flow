@@ -5,6 +5,7 @@ import com.apiflow.common.exception.BusinessException;
 import com.apiflow.common.exception.ErrorCode;
 import com.apiflow.common.util.CodeUtil;
 import com.apiflow.domain.group.event.ApiGroupDomainEvent;
+import com.apiflow.domain.group.event.ApiGroupEventData;
 import com.apiflow.domain.shared.model.AggregateRoot;
 import lombok.Getter;
 
@@ -40,9 +41,8 @@ public class ApiGroup extends AggregateRoot {
         group.createOperator = operator;
         group.updateOperator = operator;
 
-        group.registerEvent(new ApiGroupDomainEvent.Created(
-                group.groupNo, groupCode, groupName, groupDescription, operator
-        ));
+        ApiGroupEventData data = new ApiGroupEventData(group.groupNo, group.groupCode, groupName, groupDescription, operator);
+        group.registerEvent(new ApiGroupDomainEvent.Created(data));
 
         return group;
     }
@@ -87,20 +87,17 @@ public class ApiGroup extends AggregateRoot {
         this.updateOperator = operator;
         this.updateTimeMs = System.currentTimeMillis();
 
-        registerEvent(new ApiGroupDomainEvent.Updated(
-                this.groupNo, this.groupCode, this.groupName,
-                this.groupDescription, operator,
-                oldGroupCode, oldGroupName, oldGroupDescription
-        ));
+        ApiGroupEventData newData = new ApiGroupEventData(this.groupNo, this.groupCode, this.groupName, this.groupDescription, operator);
+        ApiGroupEventData oldEventData = new ApiGroupEventData(this.groupNo, oldGroupCode, oldGroupName, oldGroupDescription, operator);
+        registerEvent(new ApiGroupDomainEvent.Updated(newData, oldEventData));
     }
 
     public void delete(String operator) {
         this.updateOperator = operator;
         this.updateTimeMs = System.currentTimeMillis();
 
-        registerEvent(new ApiGroupDomainEvent.Deleted(
-                this.groupNo, operator
-        ));
+        ApiGroupEventData data = new ApiGroupEventData(this.groupNo, null, null, null, operator);
+        registerEvent(new ApiGroupDomainEvent.Deleted(data));
     }
 
     public boolean isSameGroupCode(String otherGroupCode) {

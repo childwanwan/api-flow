@@ -16,7 +16,7 @@ public class ReceiptService {
     private final MessageProducer messageProducer;
     private final HttpReceiptGateway httpReceiptGateway;
 
-    public void sendReceipt(TaskDO task, ReceiptConfig receiptConfig) {
+    public void sendReceipt(Task task, ReceiptConfig receiptConfig) {
         if (receiptConfig == null || receiptConfig.getReceiptTypes() == null) {
             return;
         }
@@ -33,7 +33,7 @@ public class ReceiptService {
         }
     }
 
-    public void sendHttpReceipt(TaskDO task, HttpReceipt httpReceipt) {
+    public void sendHttpReceipt(Task task, HttpReceipt httpReceipt) {
         if (httpReceipt == null || httpReceipt.getUrl() == null) {
             return;
         }
@@ -82,7 +82,7 @@ public class ReceiptService {
         });
     }
 
-    public void sendMqReceipt(TaskDO task, MqReceipt mqReceipt) {
+    public void sendMqReceipt(Task task, MqReceipt mqReceipt) {
         if (mqReceipt == null || mqReceipt.getTopic() == null) {
             return;
         }
@@ -101,7 +101,7 @@ public class ReceiptService {
         }
     }
 
-    private Map<String, Object> buildReceiptBody(TaskDO task) {
+    private Map<String, Object> buildReceiptBody(Task task) {
         Map<String, Object> body = new HashMap<>();
         body.put("taskNo", task.getTaskNo());
         body.put("apiCode", task.getApiCode());

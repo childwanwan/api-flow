@@ -1,9 +1,9 @@
 package com.apiflow.interfaces.biz.operationlog;
 
 import cn.hutool.core.util.ObjectUtil;
-import com.apiflow.application.operationlog.OperationLogService;
+import com.apiflow.application.operationlog.OperationLogApplicationService;
 import com.apiflow.application.operationlog.dto.OperationLogDTO;
-import com.apiflow.application.operationlog.param.OperationLogPageParam;
+import com.apiflow.application.operationlog.param.PageOperationLogParam;
 import com.apiflow.common.exception.BusinessException;
 import com.apiflow.common.exception.ErrorCode;
 import com.apiflow.common.result.PageResult;
@@ -21,13 +21,13 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/v1/operation-log")
 public class OperationLogController {
 
-    private final OperationLogService operationLogService;
+    private final OperationLogApplicationService operationLogApplicationService;
 
     @PostMapping("/page")
     public Result<PageResult<OperationLogVO>> page(@RequestBody OperationLogPageRequest request) {
         validateOperationLogPageRequest(request);
-        OperationLogPageParam pageParam = OperationLogConverter.INSTANCE.operationLogPageRequest2OperationLogPageParam(request);
-        PageResult<OperationLogDTO> pageResult = operationLogService.pageLogs(pageParam);
+        PageOperationLogParam pageParam = OperationLogConverter.INSTANCE.operationLogPageRequest2PageOperationLogParam(request);
+        PageResult<OperationLogDTO> pageResult = operationLogApplicationService.pageLogs(pageParam);
         return Result.success(OperationLogConverter.INSTANCE.operationLogDTOPage2VO(pageResult));
     }
 

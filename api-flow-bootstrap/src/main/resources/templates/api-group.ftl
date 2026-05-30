@@ -7,9 +7,11 @@
     <title>分组管理</title>
     <link rel="stylesheet" href="${request.contextPath}/static/css/common.css">
     <link rel="stylesheet" href="${request.contextPath}/static/css/input-clear.css">
+    <link rel="stylesheet" href="${request.contextPath}/static/css/resizable-columns.css">
     <script src="${request.contextPath}/static/js/pagination.js"></script>
     <script src="${request.contextPath}/static/js/input-clear.js"></script>
     <script src="${request.contextPath}/static/js/common.js"></script>
+    <script src="${request.contextPath}/static/js/resizable-columns.js"></script>
     <style>
         .sortable {
             cursor: pointer;
@@ -24,6 +26,51 @@
         }
         .sort-icon.active {
             opacity: 1;
+        }
+        .btn-disabled {
+            opacity: 0.4;
+            cursor: not-allowed !important;
+            pointer-events: auto;
+        }
+        .btn-disabled:hover {
+            opacity: 0.4;
+        }
+        .desc-cell {
+            max-width: 220px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            cursor: default;
+        }
+        .desc-tooltip {
+            position: fixed;
+            z-index: 9999;
+            max-width: 360px;
+            padding: 8px 12px;
+            background: var(--text-primary, #303133);
+            color: #fff;
+            font-size: 13px;
+            line-height: 1.6;
+            border-radius: var(--radius-sm, 4px);
+            box-shadow: var(--shadow-md, 0 4px 16px rgba(0,0,0,0.12));
+            word-break: break-all;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.15s ease;
+        }
+        .desc-tooltip.visible {
+            opacity: 1;
+        }
+        .desc-tooltip::after {
+            content: '';
+            position: absolute;
+            top: -5px;
+            left: 20px;
+            width: 0;
+            height: 0;
+            border-left: 5px solid transparent;
+            border-right: 5px solid transparent;
+            border-bottom: 5px solid var(--text-primary, #303133);
         }
     </style>
 </head>
@@ -56,14 +103,15 @@
             <thead>
             <tr>
                 <th class="checkbox-col"><input type="checkbox" onclick="toggleAll(this)"></th>
-                <th class="sortable" onclick="sortBy('GROUP_CODE', 0)">
-                    分组编码
-                    <span id="sort-GROUP_CODE" class="sort-icon">↕</span>
-                </th>
-                <th class="sortable" onclick="sortBy('GROUP_NAME', 1)">
+                <th class="sortable" onclick="sortBy('GROUP_NAME', 0)">
                     分组名称
                     <span id="sort-GROUP_NAME" class="sort-icon">↕</span>
                 </th>
+                <th class="sortable" onclick="sortBy('GROUP_CODE', 1)">
+                    分组编码
+                    <span id="sort-GROUP_CODE" class="sort-icon">↕</span>
+                </th>
+                <th>分组描述</th>
                 <th>API数量</th>
                 <th class="sortable" onclick="sortBy('CREATE_TIME_MS', 2)">
                     创建时间
@@ -73,7 +121,7 @@
             </tr>
             </thead>
             <tbody id="groupTableBody">
-            <tr><td colspan="6" class="empty-row">暂无数据</td></tr>
+            <tr><td colspan="7" class="empty-row">暂无数据</td></tr>
             </tbody>
         </table>
         <div style="padding:0 16px;">
@@ -214,20 +262,29 @@ function loadGroups() {
 function renderGroups(groups) {
     var tbody = document.getElementById('groupTableBody');
     if (!groups.length) {
-        tbody.innerHTML = '<tr><td colspan="6" class="empty-row">暂无数据</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="7" class="empty-row">暂无数据</td></tr>';
         return;
     }
     tbody.innerHTML = groups.map(function(g){
+        var hasApi = g.apiCount && g.apiCount > 0;
+        var deleteBtn = hasApi
+            ? '<button class="btn-text btn-danger-text btn-disabled" disabled title="该分组下存在 '+g.apiCount+' 个API，请先移除或转移后再删除">删除</button>'
+            : '<button class="btn-text btn-danger-text" onclick="deleteGroup(\''+g.groupNo+'\')">删除</button>';
+        var desc = g.groupDescription || '';
+        var descHtml = desc
+            ? '<td class="desc-cell" data-desc="'+desc.replace(/"/g,'&quot;')+'">'+desc+'</td>'
+            : '<td>-</td>';
         return '<tr>'+
             '<td class="checkbox-col"><input type="checkbox" class="row-checkbox" value="'+g.groupNo+'"></td>'+
-            '<td>'+g.groupCode+'</td>'+
             '<td>'+g.groupName+'</td>'+
-            '<td>'+(g.apiCount||0)+'</td>'+
+            '<td>'+g.groupCode+'</td>'+
+            descHtml+
+            '<td><a href="javascript:void(0)" class="btn-text" onclick="goToApiConfig(\''+g.groupNo+'\')">'+(g.apiCount||0)+'</a></td>'+
             '<td>'+formatTime(g.createTimeMs)+'</td>'+
             '<td class="action-col">'+
                 '<button class="btn-text" onclick="editGroup(\''+g.groupNo+'\')">编辑</button>'+
                 '<span class="action-divider">|</span>'+
-                '<button class="btn-text btn-danger-text" onclick="deleteGroup(\''+g.groupNo+'\')">删除</button>'+
+                deleteBtn+
             '</td></tr>';
     }).join('');
 }
@@ -326,6 +383,10 @@ function deleteGroup(groupNo) {
     });
 }
 
+function goToApiConfig(groupNo) {
+    parent.openTab('api-config', contextPath+'/api-config?groupNo='+encodeURIComponent(groupNo), 'API配置', null);
+}
+
 var confirmCallback = null;
 
 function showConfirm(title, message, onConfirm) {
@@ -347,19 +408,33 @@ function executeConfirm() {
     hideConfirm();
 }
 
-function showToast(msg, type) {
-    var toast = document.createElement('div');
-    toast.className = 'toast toast-'+type;
-    toast.textContent = msg;
-    document.body.appendChild(toast);
-    setTimeout(function(){ toast.remove(); }, 3000);
-}
-
 document.getElementById('groupModal').addEventListener('click', function(e){ if(e.target===this) hideModal(); });
 document.getElementById('confirmModal').addEventListener('click', function(e){ if(e.target===this) hideConfirm(); });
 
+var descTooltip = document.createElement('div');
+descTooltip.className = 'desc-tooltip';
+document.body.appendChild(descTooltip);
+
+document.getElementById('groupTableBody').addEventListener('mouseenter', function(e) {
+    var cell = e.target.closest('.desc-cell');
+    if (!cell) return;
+    if (cell.scrollWidth <= cell.clientWidth) return;
+    descTooltip.textContent = cell.getAttribute('data-desc');
+    var rect = cell.getBoundingClientRect();
+    descTooltip.style.left = rect.left + 'px';
+    descTooltip.style.top = (rect.bottom + 6) + 'px';
+    descTooltip.classList.add('visible');
+}, true);
+
+document.getElementById('groupTableBody').addEventListener('mouseleave', function(e) {
+    var cell = e.target.closest('.desc-cell');
+    if (!cell) return;
+    descTooltip.classList.remove('visible');
+}, true);
+
 updateSortIcons();
 loadGroups();
+ResizableColumns.init(document.querySelector('.data-table'), {pageKey: '/api-group'});
 </script>
 </body>
 </html>

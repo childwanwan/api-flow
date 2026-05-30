@@ -1,0 +1,106 @@
+.data-table.resizable {
+    table-layout: fixed;
+    width: 100%;
+}
+
+.data-table.resizable th {
+    position: relative;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.data-table.resizable td {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.data-table.resizable th .resize-handle {
+    position: absolute;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    width: 8px;
+    cursor: col-resize;
+    z-index: 1;
+}
+
+.data-table.resizable th .resize-handle::after {
+    content: '';
+    position: absolute;
+    right: 3px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 3px;
+    height: 0;
+    background: var(--primary, #409EFF);
+    border-radius: 1.5px;
+    transition: height 0.15s ease, opacity 0.15s ease, box-shadow 0.15s ease;
+    opacity: 0;
+}
+
+.data-table.resizable th .resize-handle:hover::after {
+    height: 80%;
+    opacity: 1;
+    box-shadow: 0 0 6px rgba(64, 158, 255, 0.4);
+}
+
+.data-table.resizable th .resize-handle.active::after {
+    height: 90%;
+    opacity: 1;
+    box-shadow: 0 0 8px rgba(64, 158, 255, 0.5);
+}
+
+.data-table.resizable th.checkbox-col .resize-handle,
+.data-table.resizable th.action-col .resize-handle {
+    display: none;
+}
+
+.resize-indicator {
+    position: absolute;
+    top: 0;
+    width: 3px;
+    background: var(--primary, #409EFF);
+    z-index: 10;
+    pointer-events: none;
+    opacity: 0;
+}
+
+.resize-indicator.visible {
+    opacity: 1;
+    box-shadow: 0 0 8px rgba(64, 158, 255, 0.5), 0 0 2px rgba(64, 158, 255, 0.8);
+}
+
+body.resizing {
+    cursor: col-resize !important;
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+}
+
+body.resizing * {
+    cursor: col-resize !important;
+}
+
+body.resizing .data-table.resizable td,
+body.resizing .data-table.resizable th {
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+.data-table.resizable th.resizing {
+    background: rgba(64, 158, 255, 0.08);
+}
+
+.data-table.resizable td.resizing {
+    background: rgba(64, 158, 255, 0.05);
+}
+
+.data-table.resizable td.desc-cell {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: none;
+}

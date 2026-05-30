@@ -6,7 +6,7 @@ import com.apiflow.api.repository.user.param.InsertUserParam;
 import com.apiflow.api.repository.user.param.SelectUserParam;
 import com.apiflow.api.repository.user.param.UpdateUserParam;
 import com.apiflow.application.user.AuthService;
-import com.apiflow.application.user.UserService;
+import com.apiflow.application.user.UserApplicationService;
 import com.apiflow.common.enums.EnableStatus;
 import com.apiflow.common.exception.ErrorCode;
 import com.apiflow.common.repository.FieldCondition;
@@ -15,6 +15,7 @@ import com.apiflow.common.util.MD5Util;
 import com.apiflow.interfaces.base.request.UserCreateRequest;
 import com.apiflow.interfaces.base.request.UserUpdateRequest;
 import com.apiflow.interfaces.base.response.UserListResponse;
+import com.apiflow.interfaces.base.converter.UserVOConverter;
 import com.apiflow.interfaces.base.vo.UserVO;
 import com.apiflow.interfaces.util.TokenUtil;
 import jakarta.servlet.http.HttpServletRequest;
@@ -32,29 +33,17 @@ import java.util.List;
 @RequestMapping("/user")
 public class UserController {
 
-    private final UserService userService;
-    private final AuthService authService;
+    private static final UserVOConverter USER_VO_CONVERTER = UserVOConverter.INSTANCE;
 
-    private UserVO toUserVO(UserIDTO dto) {
-        if (dto == null) return null;
-        return UserVO.builder()
-                .id(dto.getId())
-                .username(dto.getUsername())
-                .role(dto.getRole())
-                .status(dto.getStatus())
-                .createTimeMs(dto.getCreateTimeMs())
-                .updateTimeMs(dto.getUpdateTimeMs())
-                .createOperator(dto.getCreateOperator())
-                .lastLoginTimeMs(dto.getLastLoginTimeMs())
-                .build();
-    }
+    private final UserApplicationService userApplicationService;
+    private final AuthService authService;
 
     @GetMapping
     public String userPage(Model model, HttpServletRequest request) {
         model.addAttribute("username", request.getAttribute("username"));
         model.addAttribute("role", request.getAttribute("role"));
 
-        List<UserIDTO> userList = userService.getUserList(null);
+        List<UserIDTO> userList = userApplicationService.getUserList(null);
         model.addAttribute("userList", userList);
         return "user";
     }
@@ -69,11 +58,11 @@ public class UserController {
                 .role(StrUtil.isBlank(role) ? null : FieldCondition.of(role))
                 .status(StrUtil.isBlank(status) ? null : FieldCondition.of(status))
                 .build();
-        List<UserIDTO> userList = userService.getUserList(param);
-        long total = userService.count(param);
+        List<UserIDTO> userList = userApplicationService.getUserList(param);
+        long total = userApplicationService.count(param);
 
         UserListResponse response = UserListResponse.builder()
-                .list(userList.stream().map(this::toUserVO).toList())
+                .list(userList.stream().map(USER_VO_CONVERTER::toVO).toList())
                 .total(total)
                 .build();
         return Result.success(response);
@@ -82,11 +71,11 @@ public class UserController {
     @GetMapping("/api/{id}")
     @ResponseBody
     public Result<UserVO> getUser(@PathVariable Long id) {
-        UserIDTO user = userService.getUserById(id);
+        UserIDTO user = userApplicationService.getUserById(id);
         if (user == null) {
             return Result.fail(ErrorCode.USER_NOT_FOUND);
         }
-        return Result.success(toUserVO(user));
+        return Result.success(USER_VO_CONVERTER.toVO(user));
     }
 
     @PostMapping("/api/create")
@@ -103,7 +92,7 @@ public class UserController {
             return Result.fail(ErrorCode.USER_PASSWORD_EMPTY);
         }
 
-        if (userService.existsByUsername(username)) {
+        if (userApplicationService.existsByUsername(username)) {
             return Result.fail(ErrorCode.USER_USERNAME_EXISTS);
         }
 
@@ -116,7 +105,7 @@ public class UserController {
                 .createOperator(operator)
                 .build();
 
-        if (userService.createUser(insertParam)) {
+        if (userApplicationService.createUser(insertParam)) {
             return Result.success("创建成功");
         }
         return Result.fail(ErrorCode.USER_CREATE_FAILED);
@@ -136,7 +125,7 @@ public class UserController {
                 .status(StrUtil.isBlank(status) ? null : status)
                 .build();
 
-        if (userService.updateUser(updateParam)) {
+        if (userApplicationService.updateUser(updateParam)) {
             return Result.success("更新成功");
         }
         return Result.fail(ErrorCode.USER_UPDATE_FAILED);
@@ -145,7 +134,7 @@ public class UserController {
     @DeleteMapping("/api/{id}")
     @ResponseBody
     public Result<String> deleteUser(@PathVariable Long id) {
-        if (userService.deleteUser(id)) {
+        if (userApplicationService.deleteUser(id)) {
             return Result.success("删除成功");
         }
         return Result.fail(ErrorCode.USER_DELETE_FAILED);

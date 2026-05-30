@@ -1,8 +1,8 @@
 package com.apiflow.api.repository.config.param;
 
+import cn.hutool.core.util.ObjectUtil;
+import com.apiflow.common.constant.SystemConstant;
 import com.apiflow.common.repository.ConditionNode;
-import com.apiflow.common.repository.FieldCondition;
-import com.apiflow.common.repository.QueryCondition;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -15,18 +15,12 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 public class SelectApiConfigParam {
-    private FieldCondition<String> apiCode;
-    private FieldCondition<String> groupNo;
-    private FieldCondition<String> status;
-    private FieldCondition<String> apiName;
-    private FieldCondition<Long> requestTimeoutMs;
-    private FieldCondition<Integer> autoRetryCount;
-    private FieldCondition<Integer> maxQueueSize;
-    private FieldCondition<Long> createTimeMs;
-    private FieldCondition<Long> updateTimeMs;
-    private FieldCondition<Integer> rateLimitConfigLimit;
-    private FieldCondition<Integer> rateLimitConfigWindowSeconds;
+    private Integer limit;
     private List<ApiConfigField> selectFields;
-    private List<QueryCondition<ApiConfigField>> conditions;
+    private List<OrderBy> orders;
     private ConditionNode condition;
+
+    public Integer getEffectiveLimit() {
+        return ObjectUtil.isNotEmpty(this.getLimit()) ? this.getLimit() : SystemConstant.DEFAULT_MAX_LIMIT;
+    }
 }

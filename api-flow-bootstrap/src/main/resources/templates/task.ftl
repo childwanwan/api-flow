@@ -7,9 +7,11 @@
     <title>任务管理</title>
     <link rel="stylesheet" href="${request.contextPath}/static/css/common.css">
     <link rel="stylesheet" href="${request.contextPath}/static/css/input-clear.css">
+    <link rel="stylesheet" href="${request.contextPath}/static/css/resizable-columns.css">
     <script src="${request.contextPath}/static/js/pagination.js"></script>
     <script src="${request.contextPath}/static/js/input-clear.js"></script>
     <script src="${request.contextPath}/static/js/common.js"></script>
+    <script src="${request.contextPath}/static/js/resizable-columns.js"></script>
 </head>
 <body class="iframe-body">
 <div class="iframe-content">
@@ -81,7 +83,9 @@ function priorityText(p) { if(p<=3) return p+' (高)'; if(p<=7) return p+' (普�
 
 function loadApis() {
     fetch(contextPath+'/api/v1/config/list').then(function(r){return r.json();}).then(function(res){
-        if(res.success) { var opts='<option value="">全部</option>'; (res.data||[]).forEach(function(c){opts+='<option value="'+c.apiCode+'">'+c.apiName+'</option>';}); document.getElementById('searchApiCode').innerHTML=opts; }
+        if(res.success) { var opts='<option value="">全部</option>'; (res.data||[]).forEach(function(c){opts+='<option value="'+c.apiCode+'">'+c.apiName+'</option>';}); document.getElementById('searchApiCode').innerHTML = opts; }
+    }).catch(function(e){
+        console.error('Failed to load APIs:', e);
     });
 }
 
@@ -193,10 +197,9 @@ function cancelTask(taskNo) { if(!confirm('确定要取消该任务吗？'))retu
 function retryTask(taskNo) { if(!confirm('确定要重试该任务吗？'))return; fetch(BASE+'/retry',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({taskNo:taskNo})}).then(function(r){return r.json();}).then(function(res){if(res.success){showToast('重试成功','success');loadTasks();closeDrawer();}else showToast(res.message||'重试失败','error');}); }
 function executeNow(taskNo) { if(!confirm('确定要立即执行该任务吗？'))return; fetch(BASE+'/execute-now',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({taskNo:taskNo})}).then(function(r){return r.json();}).then(function(res){if(res.success){showToast('已提交执行','success');loadTasks();closeDrawer();}else showToast(res.message||'操作失败','error');}); }
 
-function showToast(msg,type) { var t=document.createElement('div');t.className='toast toast-'+type;t.textContent=msg;document.body.appendChild(t);setTimeout(function(){t.remove();},3000); }
-
 loadApis();
 loadTasks();
+ResizableColumns.init(document.querySelector('.data-table'), {pageKey: '/task'});
 </script>
 </body>
 </html>

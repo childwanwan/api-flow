@@ -7,9 +7,11 @@
     <title>调度日志</title>
     <link rel="stylesheet" href="${request.contextPath}/static/css/common.css">
     <link rel="stylesheet" href="${request.contextPath}/static/css/input-clear.css">
+    <link rel="stylesheet" href="${request.contextPath}/static/css/resizable-columns.css">
     <script src="${request.contextPath}/static/js/pagination.js"></script>
     <script src="${request.contextPath}/static/js/input-clear.js"></script>
     <script src="${request.contextPath}/static/js/common.js"></script>
+    <script src="${request.contextPath}/static/js/resizable-columns.js"></script>
 </head>
 <body class="iframe-body">
 <div class="iframe-content">
@@ -280,8 +282,6 @@ var origRenderChangeLogs=renderChangeLogs;
 renderChangeLogs=function(logs){changeLogCache=logs;origRenderChangeLogs(logs);};
 
 function closeDrawer() { document.getElementById('detailDrawer').style.display='none'; }
-function showToast(msg,type) { var t=document.createElement('div');t.className='toast toast-'+type;t.textContent=msg;document.body.appendChild(t);setTimeout(function(){t.remove();},3000); }
-
 var urlParams=new URLSearchParams(window.location.search);
 if(urlParams.get('tab')==='change'){switchMainTab(document.querySelectorAll('.tab-item')[2],'change-log');}
 if(urlParams.get('apiCode')){document.getElementById('changeApiCode').value=urlParams.get('apiCode');}
@@ -290,6 +290,10 @@ loadApis();
 searchExecLogs();
 searchReceiptLogs();
 searchChangeLogs();
+var logTables = document.querySelectorAll('.data-table');
+if (logTables[0]) ResizableColumns.init(logTables[0], {pageKey: '/task-log-exec'});
+if (logTables[1]) ResizableColumns.init(logTables[1], {pageKey: '/task-log-receipt'});
+if (logTables[2]) ResizableColumns.init(logTables[2], {pageKey: '/task-log-change'});
 </script>
 </body>
 </html>

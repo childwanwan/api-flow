@@ -7,9 +7,11 @@
     <title>用户管理</title>
     <link rel="stylesheet" href="${request.contextPath}/static/css/common.css">
     <link rel="stylesheet" href="${request.contextPath}/static/css/input-clear.css">
+    <link rel="stylesheet" href="${request.contextPath}/static/css/resizable-columns.css">
     <script src="${request.contextPath}/static/js/pagination.js"></script>
     <script src="${request.contextPath}/static/js/input-clear.js"></script>
     <script src="${request.contextPath}/static/js/common.js"></script>
+    <script src="${request.contextPath}/static/js/resizable-columns.js"></script>
 </head>
 <body class="iframe-body">
 <div class="iframe-content">
@@ -142,10 +144,10 @@ function saveUser() {
     });
 }
 function deleteUser(id) { if(!confirm('确定要删除该用户吗？'))return; fetch(BASE+'/'+id,{method:'DELETE'}).then(function(r){return r.json();}).then(function(data){if(data.success){showToast('删除成功','success');loadUsers();}else showToast((data.error&&data.error.message)||'删除失败','error');}); }
-function showToast(msg,type) { var t=document.createElement('div');t.className='toast toast-'+type;t.textContent=msg;document.body.appendChild(t);setTimeout(function(){t.remove();},3000); }
 document.getElementById('userModal').addEventListener('click',function(e){if(e.target===this)hideModal();});
 
 loadUsers();
+ResizableColumns.init(document.querySelector('.data-table'), {pageKey: '/user'});
 </script>
 </body>
 </html>

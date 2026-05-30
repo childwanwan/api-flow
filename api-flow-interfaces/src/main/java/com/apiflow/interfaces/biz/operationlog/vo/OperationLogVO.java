@@ -17,6 +17,8 @@ public class OperationLogVO {
 
     private String logType;
 
+    private String module;
+
     private String operator;
 
     private String showDetail;

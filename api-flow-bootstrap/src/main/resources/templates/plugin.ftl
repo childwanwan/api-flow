@@ -7,8 +7,10 @@
     <title>插件管理</title>
     <link rel="stylesheet" href="${request.contextPath}/static/css/common.css">
     <link rel="stylesheet" href="${request.contextPath}/static/css/input-clear.css">
+    <link rel="stylesheet" href="${request.contextPath}/static/css/resizable-columns.css">
     <script src="${request.contextPath}/static/js/input-clear.js"></script>
     <script src="${request.contextPath}/static/js/common.js"></script>
+    <script src="${request.contextPath}/static/js/resizable-columns.js"></script>
 </head>
 <body class="iframe-body">
 <div class="iframe-content">
@@ -125,10 +127,12 @@ function showPluginDetail(code) {
     });
 }
 function closeDrawer() { document.getElementById('pluginDrawer').style.display='none'; }
-function showToast(msg,type) { var t=document.createElement('div');t.className='toast toast-'+type;t.textContent=msg;document.body.appendChild(t);setTimeout(function(){t.remove();},3000); }
 
 document.getElementById('pluginModal').addEventListener('click',function(e){if(e.target===this)hideModal();});
 loadPlugins();
+var pluginTables = document.querySelectorAll('#loaded-plugins .data-table, #plugin-market .data-table');
+if (pluginTables[0]) ResizableColumns.init(pluginTables[0], {pageKey: '/plugin-loaded'});
+if (pluginTables[1]) ResizableColumns.init(pluginTables[1], {pageKey: '/plugin-market'});
 </script>
 </body>
 </html>

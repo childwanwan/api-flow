@@ -1,15 +1,20 @@
 package com.apiflow.application.task;
 
+import cn.hutool.core.util.StrUtil;
 import com.apiflow.common.enums.ActionType;
+import com.apiflow.common.repository.ConditionNode;
 import com.apiflow.common.repository.FieldCondition;
+import com.apiflow.api.repository.config.param.ApiConfigField;
 import com.apiflow.api.repository.config.param.SelectOneApiConfigParam;
 import com.apiflow.api.repository.config.ApiConfigRepository;
 import com.apiflow.api.repository.task.TaskRepository;
 import com.apiflow.api.repository.task.idto.TaskIDTO;
 import com.apiflow.api.repository.task.param.SelectTaskParam;
-import com.apiflow.application.task.command.TaskCancelCommand;
-import com.apiflow.application.task.command.TaskRetryCommand;
-import com.apiflow.application.task.command.TaskSubmitCommand;
+import com.apiflow.application.task.param.CancelTaskParam;
+import com.apiflow.application.task.param.ListTaskParam;
+import com.apiflow.application.task.param.RetryTaskParam;
+import com.apiflow.application.task.param.SubmitTaskParam;
+import com.apiflow.application.task.converter.TaskConverter;
 import com.apiflow.application.task.dto.*;
 import com.apiflow.common.exception.BusinessException;
 import com.apiflow.common.exception.ErrorCode;
@@ -21,15 +26,14 @@ import com.apiflow.domain.config.model.PluginConfig;
 import com.apiflow.domain.plugin.PluginChainExecutor;
 import com.apiflow.domain.plugin.PluginContext;
 import com.apiflow.domain.scheduler.TaskWakeUpSignal;
-import com.apiflow.domain.scheduler.TaskChangeEvent;
-import com.apiflow.domain.shared.event.DomainEventPublisher;
 import com.apiflow.domain.task.model.ExecInfo;
 import com.apiflow.domain.task.model.ReceiptConfig;
-import com.apiflow.domain.task.model.TaskDO;
+import com.apiflow.domain.task.model.Task;
 import com.apiflow.domain.task.service.TaskDomainService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.util.List;
 import java.util.Map;
@@ -39,17 +43,19 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class TaskApplicationService {
 
+    private static final ApiConfigConverter API_CONFIG_CONVERTER = ApiConfigConverter.INSTANCE;
+    private static final TaskConverter CONVERTER = TaskConverter.INSTANCE;
+
     private final TaskDomainService taskDomainService;
     private final ApiConfigRepository apiConfigRepository;
     private final TaskRepository taskRepository;
     private final PluginChainExecutor pluginChainExecutor;
-    private final DomainEventPublisher domainEventPublisher;
     private final TaskWakeUpSignal taskWakeUpSignal;
-    private static final ApiConfigConverter API_CONFIG_CONVERTER = ApiConfigConverter.INSTANCE;
+    private final TransactionTemplate transactionTemplate;
 
-    public TaskDTO submitTask(TaskSubmitCommand command) {
+    public TaskDTO submitTask(SubmitTaskParam param) {
         SelectOneApiConfigParam configParam = SelectOneApiConfigParam.builder()
-                .apiCode(FieldCondition.of(command.getApiCode())).build();
+                .condition(ConditionNode.eq(ApiConfigField.API_CODE.getFieldName(), param.getApiCode())).build();
         ApiConfig config = API_CONFIG_CONVERTER.apiConfigIDTOToApiConfig(apiConfigRepository.selectOne(configParam));
         if (config == null || Boolean.TRUE.equals(config.getDeleted())) {
             throw new BusinessException(ErrorCode.API_NOT_FOUND);
@@ -59,38 +65,42 @@ public class TaskApplicationService {
         }
 
         ReceiptConfig receiptConfig = config.getReceiptConfig();
-        if (command.getReceiptConfig() != null) {
-            receiptConfig = toReceiptConfig(command.getReceiptConfig());
+        if (param.getReceiptConfig() != null) {
+            receiptConfig = CONVERTER.toReceiptConfig(param.getReceiptConfig());
         }
+        ReceiptConfig effectiveReceiptConfig = receiptConfig;
 
-        TaskDO task = taskDomainService.createTask(
-                command.getApiCode(),
-                config.getApiName(),
-                command.getSource(),
-                command.getGroupNo(),
-                command.getActionType(),
-                command.getPriority(),
-                command.getCustomData(),
-                receiptConfig,
-                config.getAutoRetryCount(),
-                config.getRetryIntervalMs()
-        );
+        Task task = transactionTemplate.execute(status -> {
+            Task t = taskDomainService.createTask(
+                    param.getApiCode(),
+                    config.getApiName(),
+                    param.getSource(),
+                    param.getGroupNo(),
+                    param.getActionType(),
+                    param.getPriority(),
+                    param.getCustomData(),
+                    effectiveReceiptConfig,
+                    config.getAutoRetryCount(),
+                    config.getRetryIntervalMs()
+            );
 
-        if (ActionType.SYNC.getValue().equals(command.getActionType())) {
-            task = executeTaskSync(task);
-        }
+            if (ActionType.SYNC.getValue().equals(param.getActionType())) {
+                t = executeTaskSync(t);
+            }
 
-        domainEventPublisher.publish(TaskChangeEvent.submitted(task.getTaskNo()));
+            return t;
+        });
+
         taskWakeUpSignal.setSignal();
 
-        return toDTO(task);
+        return CONVERTER.toDTO(task);
     }
 
-    private TaskDO executeTaskSync(TaskDO task) {
+    private Task executeTaskSync(Task task) {
         task.startExecute();
         try {
             SelectOneApiConfigParam configParam = SelectOneApiConfigParam.builder()
-                    .apiCode(FieldCondition.of(task.getApiCode())).build();
+                    .condition(ConditionNode.eq(ApiConfigField.API_CODE.getFieldName(), task.getApiCode())).build();
             ApiConfig config = API_CONFIG_CONVERTER.apiConfigIDTOToApiConfig(apiConfigRepository.selectOne(configParam));
 
             ExecInfo execInfo = executePluginChain(task, config);
@@ -102,7 +112,7 @@ public class TaskApplicationService {
         }
     }
 
-    private ExecInfo executePluginChain(TaskDO task, ApiConfig config) {
+    private ExecInfo executePluginChain(Task task, ApiConfig config) {
         Map<String, Object> params = null;
         Map<String, Object> customData = null;
         if (task.getRequestContext() != null) {
@@ -126,7 +136,7 @@ public class TaskApplicationService {
 
     @SuppressWarnings("unchecked")
     private Map<String, Object> parseJsonToMap(String json) {
-        if (json == null || json.isEmpty()) {
+        if (StrUtil.isEmpty(json)) {
             return null;
         }
         try {
@@ -155,133 +165,36 @@ public class TaskApplicationService {
     }
 
     public TaskDTO getTask(String taskNo) {
-        TaskDO task = taskDomainService.getTask(taskNo);
-        return toDTO(task);
+        Task task = taskDomainService.getTask(taskNo);
+        return CONVERTER.toDTO(task);
     }
 
-    public TaskDTO cancelTask(TaskCancelCommand command) {
-        TaskDO task = taskDomainService.cancelTask(command.getTaskNo(), command.getReason(), command.getCanceledBy());
-        return toDTO(task);
+    public TaskDTO cancelTask(CancelTaskParam param) {
+        Task task = transactionTemplate.execute(status ->
+                taskDomainService.cancelTask(param.getTaskNo(), param.getReason(), param.getCanceledBy()));
+        return CONVERTER.toDTO(task);
     }
 
-    public TaskDTO retryTask(TaskRetryCommand command) {
-        TaskDO task = taskDomainService.retryTask(command.getTaskNo());
-        domainEventPublisher.publish(TaskChangeEvent.retried(task.getTaskNo()));
+    public TaskDTO retryTask(RetryTaskParam param) {
+        Task task = transactionTemplate.execute(status ->
+                taskDomainService.retryTask(param.getTaskNo()));
         taskWakeUpSignal.setSignal();
-        return toDTO(task);
+        return CONVERTER.toDTO(task);
     }
 
-    public List<TaskDTO> listTasks(String taskNo, String apiCode, String status, Integer limit) {
+    public List<TaskDTO> listTasks(ListTaskParam param) {
         SelectTaskParam.SelectTaskParamBuilder builder = SelectTaskParam.builder();
-        if (taskNo != null && !taskNo.isEmpty()) {
-            builder.taskNo(FieldCondition.<String>builder().like(taskNo).build());
+        if (StrUtil.isNotEmpty(param.getTaskNo())) {
+            builder.taskNo(FieldCondition.<String>builder().like(param.getTaskNo()).build());
         }
-        if (apiCode != null && !apiCode.isEmpty()) {
-            builder.apiCode(FieldCondition.of(apiCode));
+        if (StrUtil.isNotEmpty(param.getApiCode())) {
+            builder.apiCode(FieldCondition.of(param.getApiCode()));
         }
-        if (status != null && !status.isEmpty()) {
-            builder.status(FieldCondition.of(status));
+        if (StrUtil.isNotEmpty(param.getStatus())) {
+            builder.status(FieldCondition.of(param.getStatus()));
         }
-        if (limit != null) {
-            builder.limit(limit);
-        } else {
-            builder.limit(100);
-        }
+        builder.limit(param.getLimit() != null ? param.getLimit() : 100);
         List<TaskIDTO> tasks = taskRepository.selectList(builder.build());
-        return tasks.stream().map(this::toDTOFromIDTO).toList();
+        return CONVERTER.toDTOListFromIDTO(tasks);
     }
-
-    private TaskDTO toDTOFromIDTO(TaskIDTO dto) {
-        return TaskDTO.builder()
-                .id(dto.getId())
-                .taskNo(dto.getTaskNo())
-                .source(dto.getSource())
-                .groupNo(dto.getGroupNo())
-                .apiCode(dto.getApiCode())
-                .apiName(dto.getApiName())
-                .actionType(dto.getActionType())
-                .status(dto.getStatus())
-                .interruptFlag(dto.getInterruptFlag())
-                .compensateStatus(dto.getCompensateStatus())
-                .priority(dto.getPriority())
-                .retryCount(dto.getRetryCount())
-                .maxRetryCount(dto.getMaxRetryCount())
-                .createTimeMs(dto.getCreateTimeMs())
-                .startExecuteTimeMs(dto.getStartExecuteTimeMs())
-                .endExecuteTimeMs(dto.getEndExecuteTimeMs())
-                .executeDurationMs(dto.getExecuteDurationMs())
-                .updateTimeMs(dto.getUpdateTimeMs())
-                .build();
-    }
-
-    private TaskDTO toDTO(TaskDO task) {
-        return TaskDTO.builder()
-                .id(task.getId())
-                .taskNo(task.getTaskNo())
-                .source(task.getSource())
-                .groupNo(task.getGroupNo())
-                .apiCode(task.getApiCode())
-                .apiName(task.getApiName())
-                .actionType(task.getActionType())
-                .status(task.getStatus())
-                .interruptFlag(task.getInterruptFlag())
-                .compensateStatus(task.getCompensateStatus())
-                .compensateRetryCount(task.getCompensateRetryCount())
-                .compensateNextRetryTimeMs(task.getCompensateNextRetryTimeMs())
-                .priority(task.getPriority())
-                .requestContext(toRequestContextDTO(task.getRequestContext()))
-                .execInfo(toExecInfoDTO(task.getExecInfo()))
-                .responseData(task.getResponseData())
-                .expireTimeMs(task.getExpireTimeMs())
-                .receiptConfig(toReceiptConfigDTO(task.getReceiptConfig()))
-                .receiptInfo(toReceiptInfoDTO(task.getReceiptInfo()))
-                .retryCount(task.getRetryCount())
-                .maxRetryCount(task.getMaxRetryCount())
-                .nextRetryTimeMs(task.getNextRetryTimeMs())
-                .createTimeMs(task.getCreateTimeMs())
-                .startExecuteTimeMs(task.getStartExecuteTimeMs())
-                .endExecuteTimeMs(task.getEndExecuteTimeMs())
-                .executeDurationMs(task.getExecuteDurationMs())
-                .cancelTimeMs(task.getCancelTimeMs())
-                .cancelReason(task.getCancelReason())
-                .canceledBy(task.getCanceledBy())
-                .updateTimeMs(task.getUpdateTimeMs())
-                .build();
-    }
-
-    private RequestContextDTO toRequestContextDTO(com.apiflow.domain.task.model.RequestContext context) {
-        if (context == null) return null;
-        return RequestContextDTO.builder()
-                .params(context.getParams())
-                .customData(context.getCustomData())
-                .build();
-    }
-
-    private ExecInfoDTO toExecInfoDTO(com.apiflow.domain.task.model.ExecInfo info) {
-        if (info == null) return null;
-        return ExecInfoDTO.builder()
-                .totalCostTimeMs(info.getTotalCostTimeMs())
-                .retryCount(info.getRetryCount())
-                .build();
-    }
-
-    private ReceiptConfigDTO toReceiptConfigDTO(ReceiptConfig config) {
-        if (config == null) return null;
-        return ReceiptConfigDTO.builder()
-                .receiptTypes(config.getReceiptTypes())
-                .build();
-    }
-
-    private ReceiptInfoDTO toReceiptInfoDTO(com.apiflow.domain.task.model.ReceiptInfo info) {
-        if (info == null) return null;
-        return ReceiptInfoDTO.builder().build();
-    }
-
-    private ReceiptConfig toReceiptConfig(ReceiptConfigDTO dto) {
-        if (dto == null) return null;
-        return ReceiptConfig.builder()
-                .receiptTypes(dto.getReceiptTypes())
-                .build();
-    }
-
 }

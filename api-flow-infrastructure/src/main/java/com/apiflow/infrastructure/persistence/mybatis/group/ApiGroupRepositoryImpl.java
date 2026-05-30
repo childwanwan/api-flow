@@ -32,23 +32,39 @@ public class ApiGroupRepositoryImpl implements ApiGroupRepository {
     private final ApiGroupMapper apiGroupMapper;
 
     @Override
-    public ApiGroupIDTO save(SaveApiGroupParam param) {
+    public ApiGroupIDTO findByGroupCode(String groupCode) {
+        SelectOneApiGroupParam param = SelectOneApiGroupParam.builder()
+                .condition(ConditionNode.eq(ApiGroupField.GROUP_CODE.getFieldName(), groupCode))
+                .selectFields(List.of(ApiGroupField.values()))
+                .build();
+        return selectOne(param);
+    }
+
+    @Override
+    public ApiGroupIDTO findByGroupNo(String groupNo) {
+        SelectOneApiGroupParam param = SelectOneApiGroupParam.builder()
+                .condition(ConditionNode.eq(ApiGroupField.GROUP_NO.getFieldName(), groupNo))
+                .selectFields(List.of(ApiGroupField.values()))
+                .build();
+        return selectOne(param);
+    }
+
+    @Override
+    public void save(SaveApiGroupParam param) {
         if (ObjectUtil.isEmpty(param)) {
             throw new BusinessException(ErrorCode.PARAM_IS_EMPTY);
         }
         ApiGroupPO po = ApiGroupConverter.INSTANCE.saveParamToPO(param);
         apiGroupMapper.insert(po);
-        return ApiGroupConverter.INSTANCE.poToIDTO(po);
     }
 
     @Override
-    public ApiGroupIDTO update(UpdateApiGroupParam param) {
+    public void update(UpdateApiGroupParam param) {
         if (ObjectUtil.isEmpty(param) || ObjectUtil.isEmpty(param.getId())) {
             throw new BusinessException(ErrorCode.PARAM_IS_EMPTY);
         }
         ApiGroupPO po = ApiGroupConverter.INSTANCE.updateParamToPO(param);
         apiGroupMapper.updateById(po);
-        return ApiGroupConverter.INSTANCE.poToIDTO(po);
     }
 
     @Override
@@ -59,8 +75,12 @@ public class ApiGroupRepositoryImpl implements ApiGroupRepository {
         QueryWrapper<ApiGroupPO> wrapper = new QueryWrapper<>();
         QueryConditionHelper.applySelectFields(wrapper, param.getSelectFields());
         applyCondition(wrapper, param.getCondition());
-        ApiGroupPO po = apiGroupMapper.selectOne(wrapper);
-        return po == null ? null : ApiGroupConverter.INSTANCE.poToIDTO(po);
+        wrapper.orderByDesc("id").last("LIMIT 1");
+        List<ApiGroupPO> list = apiGroupMapper.selectList(wrapper);
+        if (CollectionUtil.isEmpty(list)) {
+            return null;
+        }
+        return ApiGroupConverter.INSTANCE.poToIDTO(list.get(0));
     }
 
     @Override

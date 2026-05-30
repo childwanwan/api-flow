@@ -11,11 +11,12 @@ import com.apiflow.domain.alarm.LogAlarmSender;
 import com.apiflow.domain.config.service.ApiConfigDomainService;
 import com.apiflow.domain.group.service.ApiGroupDomainService;
 import com.apiflow.domain.lock.DistributedLock;
-import com.apiflow.domain.plugin.Plugin;
 import com.apiflow.domain.plugin.PluginChainExecutor;
 import com.apiflow.domain.plugin.builtin.BusinessExecutorPlugin;
 import com.apiflow.domain.plugin.builtin.ParamValidatorPlugin;
 import com.apiflow.domain.plugin.builtin.RateLimitCheckPlugin;
+import com.apiflow.domain.plugin.service.PluginConfigDomainService;
+import com.apiflow.api.repository.plugin.PluginConfigRepository;
 import com.apiflow.domain.ratelimit.RateLimiter;
 import com.apiflow.domain.receipt.HttpReceiptGateway;
 import com.apiflow.domain.receipt.ReceiptService;
@@ -48,8 +49,13 @@ public class DomainServiceConfig {
     }
 
     @Bean
-    public ApiGroupDomainService apiGroupDomainService(ApiGroupRepository apiGroupRepository) {
-        return new ApiGroupDomainService(apiGroupRepository);
+    public ApiGroupDomainService apiGroupDomainService(ApiGroupRepository apiGroupRepository, ApiConfigRepository apiConfigRepository) {
+        return new ApiGroupDomainService(apiGroupRepository, apiConfigRepository);
+    }
+
+    @Bean
+    public PluginConfigDomainService pluginConfigDomainService(PluginConfigRepository pluginConfigRepository) {
+        return new PluginConfigDomainService(pluginConfigRepository);
     }
 
     @Bean

@@ -3,7 +3,7 @@ package com.apiflow.application.user;
 import com.apiflow.api.cache.CacheGateway;
 import com.apiflow.common.enums.EnableStatus;
 import com.apiflow.common.repository.FieldCondition;
-import com.apiflow.common.util.MD5Util;
+import com.apiflow.application.user.converter.UserConverter;
 import com.apiflow.application.user.dto.UserDTO;
 import com.apiflow.api.repository.user.idto.UserIDTO;
 import com.apiflow.api.repository.user.UserRepository;
@@ -11,6 +11,7 @@ import com.apiflow.api.repository.user.param.SelectOneUserParam;
 import com.apiflow.api.repository.user.param.UpdateUserParam;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
@@ -21,9 +22,11 @@ public class AuthService {
 
     private static final String TOKEN_PREFIX = "auth:token:";
     private static final long TOKEN_EXPIRE_HOURS = 24;
+    private static final UserConverter USER_CONVERTER = UserConverter.INSTANCE;
 
     private final UserRepository userRepository;
     private final CacheGateway cacheGateway;
+    private final TransactionTemplate transactionTemplate;
 
     public String login(String username, String password) {
         SelectOneUserParam selectOneUserParam = SelectOneUserParam.builder()
@@ -46,7 +49,9 @@ public class AuthService {
                 .id(user.getId())
                 .lastLoginTimeMs(System.currentTimeMillis())
                 .build();
-        userRepository.update(updateUserParam);
+        transactionTemplate.executeWithoutResult(status -> {
+            userRepository.update(updateUserParam);
+        });
         return token;
     }
 
@@ -71,15 +76,7 @@ public class AuthService {
         if (user == null) {
             return null;
         }
-        return UserDTO.builder()
-                .id(user.getId())
-                .username(user.getUsername())
-                .role(user.getRole())
-                .status(user.getStatus())
-                .createTimeMs(user.getCreateTimeMs())
-                .updateTimeMs(user.getUpdateTimeMs())
-                .lastLoginTimeMs(user.getLastLoginTimeMs())
-                .build();
+        return USER_CONVERTER.toDTO(user);
     }
 
     public String getUsernameByToken(String token) {

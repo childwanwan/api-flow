@@ -75,7 +75,6 @@ public class ApiConfigPO {
     private Boolean deleted;
 
     @TableField("version")
-    @Version
     private Integer version;
 
 }

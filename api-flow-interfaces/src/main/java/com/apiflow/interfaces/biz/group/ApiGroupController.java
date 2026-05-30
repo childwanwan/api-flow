@@ -35,22 +35,22 @@ public class ApiGroupController {
     private final ApiGroupApplicationService apiGroupApplicationService;
 
     @PostMapping("/create")
-    public Result<ApiGroupVO> createGroup(@RequestBody ApiGroupCreateRequest request, HttpServletRequest httpRequest) {
+    public Result<Void> createGroup(@RequestBody ApiGroupCreateRequest request, HttpServletRequest httpRequest) {
         validateApiGroupCreateRequest(request);
         String operator = authService.getUsernameByToken(TokenUtil.getTokenFromCookie(httpRequest));
-        ApiGroupCreateParam param = ApiGroupConverter.INSTANCE.toCreateParam(request, operator);
-        ApiGroupDTO group = apiGroupApplicationService.createGroup(param);
-        return Result.success(ApiGroupConverter.INSTANCE.toVO(group));
+        CreateApiGroupParam param = ApiGroupConverter.INSTANCE.toCreateParam(request, operator);
+        apiGroupApplicationService.createGroup(param);
+        return Result.success();
     }
 
 
     @PutMapping("/update")
-    public Result<ApiGroupVO> updateGroup(@RequestBody ApiGroupUpdateRequest request, HttpServletRequest httpRequest) {
+    public Result<Void> updateGroup(@RequestBody ApiGroupUpdateRequest request, HttpServletRequest httpRequest) {
         validateApiGroupUpdateRequest(request);
         String operator = authService.getUsernameByToken(TokenUtil.getTokenFromCookie(httpRequest));
-        ApiGroupUpdateParam param = ApiGroupConverter.INSTANCE.toUpdateParam(request, operator);
-        ApiGroupDTO group = apiGroupApplicationService.updateGroup(param);
-        return Result.success(ApiGroupConverter.INSTANCE.toVO(group));
+        UpdateApiGroupParam param = ApiGroupConverter.INSTANCE.toUpdateParam(request, operator);
+        apiGroupApplicationService.updateGroup(param);
+        return Result.success();
     }
 
     @GetMapping("/{groupNo}")
@@ -58,7 +58,7 @@ public class ApiGroupController {
         if (StrUtil.isBlank(groupNo)) {
             throw new BusinessException(ErrorCode.PARAM_IS_EMPTY);
         }
-        ApiGroupGetParam param = ApiGroupGetParam.builder().groupNo(groupNo).build();
+        GetApiGroupParam param = GetApiGroupParam.builder().groupNo(groupNo).build();
         ApiGroupDTO group = apiGroupApplicationService.getGroup(param);
         return Result.success(ApiGroupConverter.INSTANCE.toVO(group));
     }
@@ -66,7 +66,7 @@ public class ApiGroupController {
     @PostMapping("/page")
     public Result<PageResult<ApiGroupVO>> page(@RequestBody ApiGroupPageRequest request) {
         validateApiGroupPageRequest(request);
-        ApiGroupPageParam pageParam = ApiGroupConverter.INSTANCE.apiGroupPageRequest2ApiGroupPageParam(request);
+        PageApiGroupParam pageParam = ApiGroupConverter.INSTANCE.apiGroupPageRequest2ApiGroupPageParam(request);
         PageResult<ApiGroupDTO> pageResult = apiGroupApplicationService.pageGroups(pageParam);
         return Result.success(ApiGroupConverter.INSTANCE.apiGroupDTOPage2VO(pageResult));
     }
@@ -74,19 +74,19 @@ public class ApiGroupController {
     @GetMapping("/list")
     public Result<List<ApiGroupListVO>> list(ApiGroupListRequest request) {
         validateApiGroupListRequest(request);
-        ApiGroupListParam listParam = ApiGroupConverter.INSTANCE.apiGroupListRequest2ApiGroupListParam(request);
+        ListApiGroupParam listParam = ApiGroupConverter.INSTANCE.apiGroupListRequest2ApiGroupListParam(request);
         List<ApiGroupDTO> list = apiGroupApplicationService.listGroups(listParam);
         return Result.success(ApiGroupConverter.INSTANCE.apiGroupDTOList2VO(list));
     }
 
 
     @DeleteMapping("/{groupNo}")
-    public Result<String> deleteGroup(@PathVariable String groupNo, HttpServletRequest httpRequest) {
+    public Result<Void> deleteGroup(@PathVariable String groupNo, HttpServletRequest httpRequest) {
         if (StrUtil.isBlank(groupNo)) {
             throw new BusinessException(ErrorCode.PARAM_IS_EMPTY);
         }
         String operator = authService.getUsernameByToken(TokenUtil.getTokenFromCookie(httpRequest));
-        ApiGroupDeleteParam param = ApiGroupDeleteParam.builder()
+        DeleteApiGroupParam param = DeleteApiGroupParam.builder()
                 .groupNo(groupNo)
                 .operator(operator)
                 .build();
@@ -102,9 +102,9 @@ public class ApiGroupController {
     }
 
     private void validateApiGroupListRequest(ApiGroupListRequest request) {
-//        if (ObjectUtil.isEmpty(request)) {
-//            throw new BusinessException(ErrorCode.PARAM_IS_EMPTY);
-//        }
+        if (ObjectUtil.isEmpty(request)) {
+            throw new BusinessException(ErrorCode.PARAM_IS_EMPTY);
+        }
     }
 
     private void validateApiGroupCreateRequest(ApiGroupCreateRequest request) {

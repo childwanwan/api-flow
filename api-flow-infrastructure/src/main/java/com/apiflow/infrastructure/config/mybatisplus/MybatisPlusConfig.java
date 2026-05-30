@@ -11,9 +11,6 @@ import org.springframework.context.annotation.Configuration;
 @MapperScan("com.apiflow.infrastructure.persistence.mybatis")
 public class MybatisPlusConfig {
 
-    /**
-     * 添加分页插件
-     */
     @Bean
     public MybatisPlusInterceptor mybatisPlusInterceptor() {
         MybatisPlusInterceptor interceptor = new MybatisPlusInterceptor();

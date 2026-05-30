@@ -18,6 +18,7 @@
         <module>api-flow-api-repository</module>
         <module>api-flow-api-cache</module>
         <module>api-flow-api-mq</module>
+        <module>api-flow-api-async</module>
     </modules>
 
 </project>

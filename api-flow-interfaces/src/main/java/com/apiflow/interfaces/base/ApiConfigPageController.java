@@ -5,6 +5,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 
 @Controller
@@ -17,6 +18,30 @@ public class ApiConfigPageController {
         model.addAttribute("username", request.getAttribute("username"));
         model.addAttribute("role", request.getAttribute("role"));
         return "api-config";
+    }
+
+    @GetMapping("/create")
+    public String apiConfigCreatePage(Model model, HttpServletRequest request) {
+        model.addAttribute("username", request.getAttribute("username"));
+        model.addAttribute("role", request.getAttribute("role"));
+        model.addAttribute("apiCode", "");
+        return "api-config-form";
+    }
+
+    @GetMapping("/{apiCode}")
+    public String apiConfigDetailPage(@PathVariable String apiCode, Model model, HttpServletRequest request) {
+        model.addAttribute("username", request.getAttribute("username"));
+        model.addAttribute("role", request.getAttribute("role"));
+        model.addAttribute("apiCode", apiCode);
+        return "api-config-detail";
+    }
+
+    @GetMapping("/{apiCode}/edit")
+    public String apiConfigEditPage(@PathVariable String apiCode, Model model, HttpServletRequest request) {
+        model.addAttribute("username", request.getAttribute("username"));
+        model.addAttribute("role", request.getAttribute("role"));
+        model.addAttribute("apiCode", apiCode);
+        return "api-config-form";
     }
 
 }

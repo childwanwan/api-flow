@@ -3,13 +3,15 @@ package com.apiflow.interfaces.biz.task;
 import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
 import com.apiflow.application.task.TaskApplicationService;
-import com.apiflow.application.task.command.TaskCancelCommand;
-import com.apiflow.application.task.command.TaskRetryCommand;
-import com.apiflow.application.task.command.TaskSubmitCommand;
 import com.apiflow.application.task.dto.ReceiptConfigDTO;
 import com.apiflow.application.task.dto.TaskDTO;
+import com.apiflow.application.task.param.CancelTaskParam;
+import com.apiflow.application.task.param.ListTaskParam;
+import com.apiflow.application.task.param.RetryTaskParam;
+import com.apiflow.application.task.param.SubmitTaskParam;
+import com.apiflow.common.exception.BusinessException;
+import com.apiflow.common.exception.ErrorCode;
 import com.apiflow.common.result.Result;
-import com.apiflow.interfaces.annotation.OpLog;
 import com.apiflow.interfaces.biz.task.request.TaskCancelRequest;
 import com.apiflow.interfaces.biz.task.request.TaskRetryRequest;
 import com.apiflow.interfaces.biz.task.request.TaskSubmitRequest;
@@ -28,11 +30,10 @@ public class TaskController {
     private final TaskApplicationService taskApplicationService;
 
     @PostMapping("/submit")
-    @OpLog(module = "任务管理", operation = "提交任务", detail = "提交新任务")
     public Result<TaskDTO> submitTask(@RequestBody TaskSubmitRequest request) {
         validateTaskSubmitRequest(request);
         log.info("Submit task request: {}", request);
-        TaskSubmitCommand command = TaskSubmitCommand.builder()
+        SubmitTaskParam submitParam = SubmitTaskParam.builder()
                 .apiCode(request.getApiCode())
                 .source(request.getSource())
                 .groupNo(request.getGroupNo())
@@ -42,7 +43,7 @@ public class TaskController {
                 .customData(request.getCustomData())
                 .receiptConfig(request.getReceiptConfig() != null ? toReceiptConfigDTO(request.getReceiptConfig()) : null)
                 .build();
-        TaskDTO task = taskApplicationService.submitTask(command);
+        TaskDTO task = taskApplicationService.submitTask(submitParam);
         return Result.success(task);
     }
 
@@ -61,33 +62,37 @@ public class TaskController {
             @RequestParam(required = false) String status,
             @RequestParam(required = false) Integer limit) {
         log.info("List tasks request: taskNo={}, apiCode={}, status={}, limit={}", taskNo, apiCode, status, limit);
-        List<TaskDTO> tasks = taskApplicationService.listTasks(taskNo, apiCode, status, limit);
+        ListTaskParam param = ListTaskParam.builder()
+                .taskNo(taskNo)
+                .apiCode(apiCode)
+                .status(status)
+                .limit(limit)
+                .build();
+        List<TaskDTO> tasks = taskApplicationService.listTasks(param);
         return Result.success(tasks);
     }
 
     @PostMapping("/cancel")
-    @OpLog(module = "任务管理", operation = "取消任务", detail = "取消任务")
     public Result<TaskDTO> cancelTask(@RequestBody TaskCancelRequest request) {
         validateTaskCancelRequest(request);
         log.info("Cancel task request: {}", request);
-        TaskCancelCommand command = TaskCancelCommand.builder()
+        CancelTaskParam cancelParam = CancelTaskParam.builder()
                 .taskNo(request.getTaskNo())
                 .reason(request.getCancelReason())
                 .canceledBy(request.getCanceledBy())
                 .build();
-        TaskDTO task = taskApplicationService.cancelTask(command);
+        TaskDTO task = taskApplicationService.cancelTask(cancelParam);
         return Result.success(task);
     }
 
     @PostMapping("/retry")
-    @OpLog(module = "任务管理", operation = "重试任务", detail = "重试任务")
     public Result<TaskDTO> retryTask(@RequestBody TaskRetryRequest request) {
         validateTaskRetryRequest(request);
         log.info("Retry task request: {}", request);
-        TaskRetryCommand command = TaskRetryCommand.builder()
+        RetryTaskParam retryParam = RetryTaskParam.builder()
                 .taskNo(request.getTaskNo())
                 .build();
-        TaskDTO task = taskApplicationService.retryTask(command);
+        TaskDTO task = taskApplicationService.retryTask(retryParam);
         return Result.success(task);
     }
 
@@ -100,28 +105,28 @@ public class TaskController {
 
     private void validateTaskSubmitRequest(TaskSubmitRequest request) {
         if (ObjectUtil.isEmpty(request)) {
-            throw new IllegalArgumentException("request cannot be null");
+            throw new BusinessException(ErrorCode.PARAM_IS_EMPTY);
         }
         request.validate();
     }
 
     private void validateTaskCancelRequest(TaskCancelRequest request) {
         if (ObjectUtil.isEmpty(request)) {
-            throw new IllegalArgumentException("request cannot be null");
+            throw new BusinessException(ErrorCode.PARAM_IS_EMPTY);
         }
         request.validate();
     }
 
     private void validateTaskRetryRequest(TaskRetryRequest request) {
         if (ObjectUtil.isEmpty(request)) {
-            throw new IllegalArgumentException("request cannot be null");
+            throw new BusinessException(ErrorCode.PARAM_IS_EMPTY);
         }
         request.validate();
     }
 
     private void validateTaskNo(String taskNo) {
         if (StrUtil.isBlank(taskNo)) {
-            throw new IllegalArgumentException("taskNo cannot be blank");
+            throw new BusinessException(ErrorCode.PARAM_IS_EMPTY);
         }
     }
 

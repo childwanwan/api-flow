@@ -3,19 +3,22 @@ package com.apiflow.api.repository.alarm;
 import com.apiflow.api.repository.alarm.idto.AlarmRuleIDTO;
 import com.apiflow.api.repository.alarm.param.SaveAlarmRuleParam;
 import com.apiflow.api.repository.alarm.param.SelectAlarmRuleParam;
+import com.apiflow.api.repository.alarm.param.SelectOneAlarmRuleParam;
 import com.apiflow.api.repository.alarm.param.UpdateAlarmRuleParam;
 
 import java.util.List;
 
 public interface AlarmRuleRepository {
 
-    AlarmRuleIDTO save(SaveAlarmRuleParam param);
+    void save(SaveAlarmRuleParam param);
 
-    AlarmRuleIDTO update(UpdateAlarmRuleParam param);
+    void update(UpdateAlarmRuleParam param);
 
     AlarmRuleIDTO selectById(Long id);
 
+    AlarmRuleIDTO selectOne(SelectOneAlarmRuleParam param);
+
     List<AlarmRuleIDTO> selectList(SelectAlarmRuleParam param);
 
-    long delete(Long id);
+    void deleteList(List<Long> idList);
 }

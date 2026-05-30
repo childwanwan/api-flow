@@ -57,7 +57,10 @@ public class ApiGroupEventConsumer {
         }
         try {
             var node = objectMapper.readTree(record.value());
-            return node.has("eventType") ? node.get("eventType").asText() : "UNKNOWN";
+            if (node.has("header") && node.get("header").has("eventType")) {
+                return node.get("header").get("eventType").asText();
+            }
+            return "UNKNOWN";
         } catch (Exception e) {
             return "UNKNOWN";
         }

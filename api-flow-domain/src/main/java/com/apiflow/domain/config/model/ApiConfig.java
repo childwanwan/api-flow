@@ -49,13 +49,11 @@ public class ApiConfig extends AggregateRoot {
         config.apiCode = command.getApiCode();
         config.apiName = command.getApiName();
         config.apiDescription = command.getApiDescription();
-        config.status = StrUtil.isNotBlank(command.getStatus())
-                ? command.getStatus()
-                : EnableStatus.ENABLED.getValue();
-        config.requestTimeoutMs = command.getRequestTimeoutMs() != null ? command.getRequestTimeoutMs() : 30000L;
-        config.autoRetryCount = command.getAutoRetryCount() != null ? command.getAutoRetryCount() : 64;
-        config.retryIntervalMs = command.getRetryIntervalMs() != null ? command.getRetryIntervalMs() : 5000L;
-        config.maxQueueSize = command.getMaxQueueSize() != null ? command.getMaxQueueSize() : 100000;
+        config.status = command.getStatus();
+        config.requestTimeoutMs = command.getRequestTimeoutMs();
+        config.autoRetryCount = command.getAutoRetryCount();
+        config.retryIntervalMs = command.getRetryIntervalMs();
+        config.maxQueueSize = command.getMaxQueueSize();
         config.rateLimitConfig = command.getRateLimitConfig();
         config.filterRules = command.getFilterRules();
         config.pluginConfig = command.getPluginConfig();

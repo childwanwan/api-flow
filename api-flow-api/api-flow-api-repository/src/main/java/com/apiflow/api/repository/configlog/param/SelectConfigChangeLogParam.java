@@ -1,5 +1,7 @@
 package com.apiflow.api.repository.configlog.param;
 
+import cn.hutool.core.util.ObjectUtil;
+import com.apiflow.common.constant.SystemConstant;
 import com.apiflow.common.repository.ConditionNode;
 import com.apiflow.common.repository.FieldCondition;
 import com.apiflow.common.repository.QueryCondition;
@@ -23,4 +25,8 @@ public class SelectConfigChangeLogParam {
     private List<ConfigChangeLogField> selectFields;
     private List<QueryCondition<ConfigChangeLogField>> conditions;
     private ConditionNode condition;
+
+    public Integer getEffectiveLimit() {
+        return ObjectUtil.isNotEmpty(this.getLimit()) ? this.getLimit() : SystemConstant.DEFAULT_MAX_LIMIT;
+    }
 }

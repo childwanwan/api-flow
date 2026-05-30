@@ -1,12 +1,15 @@
 package com.apiflow.infrastructure.persistence.mybatis.task;
 
+import cn.hutool.core.collection.CollUtil;
+import cn.hutool.core.util.ObjectUtil;
 import com.apiflow.api.repository.task.idto.TaskIDTO;
 import com.apiflow.api.repository.task.param.*;
 import com.apiflow.api.repository.task.TaskRepository;
+import com.apiflow.common.exception.BusinessException;
+import com.apiflow.common.exception.ErrorCode;
 import com.apiflow.infrastructure.persistence.mybatis.task.converter.TaskConverter;
 import com.apiflow.infrastructure.persistence.mybatis.task.entity.TaskPO;
 import com.apiflow.infrastructure.persistence.mybatis.util.QueryConditionHelper;
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
@@ -23,63 +26,79 @@ public class TaskRepositoryImpl implements TaskRepository {
     private final TaskMapper taskMapper;
 
     @Override
-    public TaskIDTO save(SaveTaskParam param) {
-        TaskPO taskPO = TaskConverter.INSTANCE.saveTaskParamToTaskEntityPO(param);
-        taskMapper.insert(taskPO);
-        return TaskConverter.INSTANCE.taskEntityPOToTaskIDTO(taskPO);
+    public TaskIDTO findByTaskNo(String taskNo) {
+        QueryWrapper<TaskPO> wrapper = new QueryWrapper<>();
+        wrapper.eq(TaskField.TASK_NO.getColumnName(), taskNo);
+        wrapper.last("LIMIT 1");
+        List<TaskPO> list = taskMapper.selectList(wrapper);
+        if (CollUtil.isEmpty(list)) {
+            return null;
+        }
+        return TaskConverter.INSTANCE.taskEntityPOToTaskIDTO(list.get(0));
     }
 
     @Override
-    public TaskIDTO update(UpdateTaskParam param) {
+    public void save(SaveTaskParam param) {
+        TaskPO taskPO = TaskConverter.INSTANCE.saveTaskParamToTaskEntityPO(param);
+        taskMapper.insert(taskPO);
+    }
+
+    @Override
+    public void update(UpdateTaskParam param) {
         TaskPO taskPO = TaskConverter.INSTANCE.updateTaskParamToTaskEntityPO(param);
         taskMapper.updateById(taskPO);
-        return TaskConverter.INSTANCE.taskEntityPOToTaskIDTO(taskPO);
     }
 
     @Override
     public TaskIDTO selectOne(SelectOneTaskParam param) {
-        if (param.getSelectFields() != null && !param.getSelectFields().isEmpty()) {
-            QueryWrapper<TaskPO> wrapper = new QueryWrapper<>();
-            QueryConditionHelper.applySelectFields(wrapper, param.getSelectFields());
-            applyConditions(wrapper, param);
-            QueryConditionHelper.applyConditions(wrapper, param.getConditions());
-            QueryConditionHelper.applyConditionNode(wrapper, param.getCondition(), createFieldResolver(TaskField.values()));
-            TaskPO taskDO = taskMapper.selectOne(wrapper);
-            return taskDO == null ? null : TaskConverter.INSTANCE.taskEntityPOToTaskIDTO(taskDO);
+        if (ObjectUtil.isEmpty(param)) {
+            throw new BusinessException(ErrorCode.PARAM_IS_EMPTY);
         }
-        LambdaQueryWrapper<TaskPO> wrapper = buildLambdaQueryWrapper(param);
+        QueryWrapper<TaskPO> wrapper = new QueryWrapper<>();
+        if (CollUtil.isNotEmpty(param.getSelectFields())) {
+            QueryConditionHelper.applySelectFields(wrapper, param.getSelectFields());
+        }
+        applyConditions(wrapper, param);
         QueryConditionHelper.applyConditions(wrapper, param.getConditions());
         QueryConditionHelper.applyConditionNode(wrapper, param.getCondition(), createFieldResolver(TaskField.values()));
-        TaskPO taskDO = taskMapper.selectOne(wrapper);
-        return taskDO == null ? null : TaskConverter.INSTANCE.taskEntityPOToTaskIDTO(taskDO);
+        wrapper.orderByDesc("id").last("LIMIT 1");
+        List<TaskPO> list = taskMapper.selectList(wrapper);
+        if (CollUtil.isEmpty(list)) {
+            return null;
+        }
+        return TaskConverter.INSTANCE.taskEntityPOToTaskIDTO(list.get(0));
     }
 
     @Override
     public List<TaskIDTO> selectList(SelectTaskParam param) {
-        if (param.getSelectFields() != null && !param.getSelectFields().isEmpty()) {
-            QueryWrapper<TaskPO> wrapper = new QueryWrapper<>();
-            QueryConditionHelper.applySelectFields(wrapper, param.getSelectFields());
-            applyConditions(wrapper, param);
-            QueryConditionHelper.applyConditions(wrapper, param.getConditions());
-            QueryConditionHelper.applyConditionNode(wrapper, param.getCondition(), createFieldResolver(TaskField.values()));
-            if (param.getLimit() != null) {
-                wrapper.last(param.getLimit() > 0, "LIMIT " + param.getLimit());
-            }
-            List<TaskPO> taskPOList = taskMapper.selectList(wrapper);
-            return taskPOList.stream()
-                    .map(TaskConverter.INSTANCE::taskEntityPOToTaskIDTO)
-                    .collect(Collectors.toList());
+        if (ObjectUtil.isEmpty(param)) {
+            throw new BusinessException(ErrorCode.PARAM_IS_EMPTY);
         }
-        LambdaQueryWrapper<TaskPO> wrapper = buildLambdaQueryWrapper(param);
+        QueryWrapper<TaskPO> wrapper = new QueryWrapper<>();
+        if (CollUtil.isNotEmpty(param.getSelectFields())) {
+            QueryConditionHelper.applySelectFields(wrapper, param.getSelectFields());
+        }
+        applyConditions(wrapper, param);
         QueryConditionHelper.applyConditions(wrapper, param.getConditions());
         QueryConditionHelper.applyConditionNode(wrapper, param.getCondition(), createFieldResolver(TaskField.values()));
-        if (param.getLimit() != null) {
-            wrapper.last(param.getLimit() > 0, "LIMIT " + param.getLimit());
-        }
+        wrapper.orderByDesc("id");
+        wrapper.last("LIMIT " + param.getEffectiveLimit());
         List<TaskPO> taskPOList = taskMapper.selectList(wrapper);
         return taskPOList.stream()
                 .map(TaskConverter.INSTANCE::taskEntityPOToTaskIDTO)
                 .collect(Collectors.toList());
+    }
+
+    @Override
+    public long count(SelectTaskParam param) {
+        if (ObjectUtil.isEmpty(param)) {
+            throw new BusinessException(ErrorCode.PARAM_IS_EMPTY);
+        }
+        QueryWrapper<TaskPO> wrapper = new QueryWrapper<>();
+        applyConditions(wrapper, param);
+        QueryConditionHelper.applyConditions(wrapper, param.getConditions());
+        QueryConditionHelper.applyConditionNode(wrapper, param.getCondition(), createFieldResolver(TaskField.values()));
+        return taskMapper.selectCount(wrapper);
     }
 
     private void applyConditions(QueryWrapper<TaskPO> wrapper, SelectOneTaskParam param) {
@@ -110,40 +129,6 @@ public class TaskRepositoryImpl implements TaskRepository {
         QueryConditionHelper.applyFieldCondition(wrapper, TaskField.UPDATE_TIME_MS.getColumnName(), param.getUpdateTimeMs());
         QueryConditionHelper.applyJsonFieldCondition(wrapper, "request_context", "traceId", param.getRequestContextTraceId());
         QueryConditionHelper.applyJsonFieldCondition(wrapper, "exec_info", "attemptCount", param.getExecInfoAttemptCount());
-    }
-
-    private LambdaQueryWrapper<TaskPO> buildLambdaQueryWrapper(SelectOneTaskParam param) {
-        LambdaQueryWrapper<TaskPO> wrapper = new LambdaQueryWrapper<>();
-        QueryConditionHelper.applyFieldCondition(wrapper, TaskPO::getTaskNo, param.getTaskNo());
-        QueryConditionHelper.applyFieldCondition(wrapper, TaskPO::getApiCode, param.getApiCode());
-        QueryConditionHelper.applyFieldCondition(wrapper, TaskPO::getApiName, param.getApiName());
-        QueryConditionHelper.applyFieldCondition(wrapper, TaskPO::getStatus, param.getStatus());
-        QueryConditionHelper.applyFieldCondition(wrapper, TaskPO::getSource, param.getSource());
-        QueryConditionHelper.applyFieldCondition(wrapper, TaskPO::getActionType, param.getActionType());
-        QueryConditionHelper.applyFieldCondition(wrapper, TaskPO::getGroupNo, param.getGroupNo());
-        QueryConditionHelper.applyFieldCondition(wrapper, TaskPO::getPriority, param.getPriority());
-        QueryConditionHelper.applyFieldCondition(wrapper, TaskPO::getCreateTimeMs, param.getCreateTimeMs());
-        QueryConditionHelper.applyFieldCondition(wrapper, TaskPO::getUpdateTimeMs, param.getUpdateTimeMs());
-        QueryConditionHelper.applyJsonFieldCondition(wrapper, "request_context", "traceId", param.getRequestContextTraceId());
-        QueryConditionHelper.applyJsonFieldCondition(wrapper, "exec_info", "attemptCount", param.getExecInfoAttemptCount());
-        return wrapper;
-    }
-
-    private LambdaQueryWrapper<TaskPO> buildLambdaQueryWrapper(SelectTaskParam param) {
-        LambdaQueryWrapper<TaskPO> wrapper = new LambdaQueryWrapper<>();
-        QueryConditionHelper.applyFieldCondition(wrapper, TaskPO::getTaskNo, param.getTaskNo());
-        QueryConditionHelper.applyFieldCondition(wrapper, TaskPO::getApiCode, param.getApiCode());
-        QueryConditionHelper.applyFieldCondition(wrapper, TaskPO::getApiName, param.getApiName());
-        QueryConditionHelper.applyFieldCondition(wrapper, TaskPO::getStatus, param.getStatus());
-        QueryConditionHelper.applyFieldCondition(wrapper, TaskPO::getSource, param.getSource());
-        QueryConditionHelper.applyFieldCondition(wrapper, TaskPO::getActionType, param.getActionType());
-        QueryConditionHelper.applyFieldCondition(wrapper, TaskPO::getGroupNo, param.getGroupNo());
-        QueryConditionHelper.applyFieldCondition(wrapper, TaskPO::getPriority, param.getPriority());
-        QueryConditionHelper.applyFieldCondition(wrapper, TaskPO::getCreateTimeMs, param.getCreateTimeMs());
-        QueryConditionHelper.applyFieldCondition(wrapper, TaskPO::getUpdateTimeMs, param.getUpdateTimeMs());
-        QueryConditionHelper.applyJsonFieldCondition(wrapper, "request_context", "traceId", param.getRequestContextTraceId());
-        QueryConditionHelper.applyJsonFieldCondition(wrapper, "exec_info", "attemptCount", param.getExecInfoAttemptCount());
-        return wrapper;
     }
 
 }

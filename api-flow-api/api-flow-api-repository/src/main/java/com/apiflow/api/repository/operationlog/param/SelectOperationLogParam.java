@@ -1,8 +1,9 @@
 package com.apiflow.api.repository.operationlog.param;
 
+import cn.hutool.core.collection.CollUtil;
+import cn.hutool.core.util.ObjectUtil;
+import com.apiflow.common.constant.SystemConstant;
 import com.apiflow.common.repository.ConditionNode;
-import com.apiflow.common.repository.FieldCondition;
-import com.apiflow.common.repository.QueryCondition;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -15,14 +16,18 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 public class SelectOperationLogParam {
-    private FieldCondition<String> bizCode;
-    private FieldCondition<String> logType;
-    private FieldCondition<String> operator;
-    private FieldCondition<Long> operateTimeMs;
-    private FieldCondition<Long> createTimeMs;
-    private Integer limit;
-    private Integer offset;
     private List<OperationLogField> selectFields;
-    private List<QueryCondition<OperationLogField>> conditions;
     private ConditionNode condition;
+    private Integer limit;
+
+    public Integer getEffectiveLimit() {
+        return ObjectUtil.isNotEmpty(this.limit) ? this.limit : SystemConstant.DEFAULT_MAX_LIMIT;
+    }
+
+    public boolean isEmpty() {
+        if (CollUtil.isEmpty(selectFields) || ObjectUtil.isEmpty(condition)) {
+            return true;
+        }
+        return false;
+    }
 }

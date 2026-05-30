@@ -1,5 +1,6 @@
 package com.apiflow.domain.group.service;
 
+import com.apiflow.api.repository.config.ApiConfigRepository;
 import com.apiflow.api.repository.group.ApiGroupRepository;
 import com.apiflow.api.repository.group.idto.ApiGroupIDTO;
 import com.apiflow.api.repository.group.param.ApiGroupField;
@@ -15,11 +16,13 @@ import com.apiflow.domain.group.model.ApiGroup;
 import lombok.RequiredArgsConstructor;
 
 import java.util.List;
+import java.util.Map;
 
 @RequiredArgsConstructor
 public class ApiGroupDomainService {
 
     private final ApiGroupRepository apiGroupRepository;
+    private final ApiConfigRepository apiConfigRepository;
     private static final ApiGroupConverter CONVERTER = ApiGroupConverter.INSTANCE;
 
     public ApiGroup create(CreateApiGroupCommand command) {
@@ -67,6 +70,11 @@ public class ApiGroupDomainService {
                 ApiGroupField.ID,
                 ApiGroupField.GROUP_NO
         );
+        Map<String, Integer> countMap = apiConfigRepository.countByGroupNos(List.of(command.getGroupNo()));
+        int apiCount = countMap.getOrDefault(command.getGroupNo(), 0);
+        if (apiCount > 0) {
+            throw new BusinessException(ErrorCode.GROUP_HAS_API);
+        }
         group.delete(command.getOperator());
         return group;
     }

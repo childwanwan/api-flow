@@ -5,6 +5,7 @@ public class SystemConstant {
     public static final int DEFAULT_PAGE_SIZE = 20;
     public static final int MAX_PAGE_SIZE = 100;
     public static final int MAX_QUERY_LIMIT = 1000;
+    public static final int MAX_OPERATE_LIMIT = 1000;
     public static final int DEFAULT_BATCH_SIZE = 100;
 
     public static final int DEFAULT_MAX_LIMIT = 200;

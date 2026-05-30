@@ -5,8 +5,8 @@ import cn.hutool.core.util.StrUtil;
 import com.apiflow.api.repository.group.idto.ApiGroupIDTO;
 import com.apiflow.api.repository.group.param.*;
 import com.apiflow.application.group.dto.ApiGroupDTO;
-import com.apiflow.application.group.param.ApiGroupListParam;
-import com.apiflow.application.group.param.ApiGroupPageParam;
+import com.apiflow.application.group.param.ListApiGroupParam;
+import com.apiflow.application.group.param.PageApiGroupParam;
 import com.apiflow.common.dto.SortOrder;
 import com.apiflow.common.repository.ConditionNode;
 import com.apiflow.domain.group.model.ApiGroup;
@@ -27,7 +27,7 @@ public interface ApiGroupConverter {
 
     UpdateApiGroupParam toUpdateParam(ApiGroup aggregate);
 
-    default SelectPageApiGroupParam apiGroupPageParam2SelectPageApiGroupParam(ApiGroupPageParam param) {
+    default SelectPageApiGroupParam apiGroupPageParam2SelectPageApiGroupParam(PageApiGroupParam param) {
         if (ObjectUtil.isEmpty(param)) {
             return null;
         }
@@ -52,7 +52,7 @@ public interface ApiGroupConverter {
         return paramBuilder.build();
     }
 
-    default SelectApiGroupParam apiGroupListParam2SelectApiGroupParam(ApiGroupListParam param) {
+    default SelectApiGroupParam apiGroupListParam2SelectApiGroupParam(ListApiGroupParam param) {
         SelectApiGroupParam.SelectApiGroupParamBuilder paramBuilder = SelectApiGroupParam.builder();
         paramBuilder.selectFields(List.of(ApiGroupField.GROUP_NO, ApiGroupField.GROUP_CODE, ApiGroupField.GROUP_NAME));
         paramBuilder.orders(List.of(OrderBy.desc(ApiGroupField.CREATE_TIME_MS), OrderBy.desc(ApiGroupField.ID)));
@@ -63,7 +63,7 @@ public interface ApiGroupConverter {
 
     ApiGroupDTO apiGroupIDTO2ApiGroupDTO(ApiGroupIDTO apiGroupIDTO);
 
-    private ConditionNode buildConditionNode(ApiGroupPageParam param) {
+    private ConditionNode buildConditionNode(PageApiGroupParam param) {
         List<ConditionNode> nodes = new ArrayList<>();
         if (StrUtil.isNotEmpty(param.getGroupNoLike())) {
             nodes.add(ConditionNode.like(ApiGroupField.GROUP_NO.getFieldName(), param.getGroupNoLike()));

@@ -1,5 +1,6 @@
 package com.apiflow.infrastructure.persistence.mybatis.user;
 
+import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
 import com.apiflow.common.enums.EnableStatus;
@@ -10,10 +11,11 @@ import com.apiflow.api.repository.user.param.SelectOneUserParam;
 import com.apiflow.api.repository.user.param.SelectUserParam;
 import com.apiflow.api.repository.user.param.UpdateUserParam;
 import com.apiflow.api.repository.user.param.UserField;
+import com.apiflow.common.exception.BusinessException;
+import com.apiflow.common.exception.ErrorCode;
 import com.apiflow.infrastructure.persistence.mybatis.user.converter.UserConverter;
 import com.apiflow.infrastructure.persistence.mybatis.user.entity.UserPO;
 import com.apiflow.infrastructure.persistence.mybatis.util.QueryConditionHelper;
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
@@ -31,50 +33,36 @@ public class UserRepositoryImpl implements UserRepository {
     @Override
     public UserIDTO selectOne(SelectOneUserParam param) {
         if (ObjectUtil.isEmpty(param) || param.isEmpty()) {
-            return null;
+            throw new BusinessException(ErrorCode.PARAM_IS_EMPTY);
         }
-        if (param.getSelectFields() != null && !param.getSelectFields().isEmpty()) {
-            QueryWrapper<UserPO> wrapper = new QueryWrapper<>();
+        QueryWrapper<UserPO> wrapper = new QueryWrapper<>();
+        if (CollUtil.isNotEmpty(param.getSelectFields())) {
             QueryConditionHelper.applySelectFields(wrapper, param.getSelectFields());
-            if (param.getUsername() != null) {
-                QueryConditionHelper.applyFieldCondition(wrapper, "username", param.getUsername());
-            }
-            QueryConditionHelper.applyConditions(wrapper, param.getConditions());
-            QueryConditionHelper.applyConditionNode(wrapper, param.getCondition(), createFieldResolver(UserField.values()));
-            UserPO userPO = userMapper.selectOne(wrapper);
-            return UserConverter.INSTANCE.userPOToUserIDTO(userPO);
         }
-        LambdaQueryWrapper<UserPO> wrapper = new LambdaQueryWrapper<>();
-        if (param.getUsername() != null) {
-            QueryConditionHelper.applyFieldCondition(wrapper, UserPO::getUsername, param.getUsername());
-        }
+        applyConditions(wrapper, param);
         QueryConditionHelper.applyConditions(wrapper, param.getConditions());
         QueryConditionHelper.applyConditionNode(wrapper, param.getCondition(), createFieldResolver(UserField.values()));
-        UserPO userPO = userMapper.selectOne(wrapper);
-        return UserConverter.INSTANCE.userPOToUserIDTO(userPO);
+        wrapper.orderByDesc("id").last("LIMIT 1");
+        List<UserPO> list = userMapper.selectList(wrapper);
+        if (CollUtil.isEmpty(list)) {
+            return null;
+        }
+        return UserConverter.INSTANCE.userPOToUserIDTO(list.get(0));
     }
 
     @Override
     public List<UserIDTO> selectList(SelectUserParam param) {
-        if (param != null && param.getSelectFields() != null && !param.getSelectFields().isEmpty()) {
-            QueryWrapper<UserPO> wrapper = new QueryWrapper<>();
+        if (ObjectUtil.isEmpty(param)) {
+            throw new BusinessException(ErrorCode.PARAM_IS_EMPTY);
+        }
+        QueryWrapper<UserPO> wrapper = new QueryWrapper<>();
+        if (CollUtil.isNotEmpty(param.getSelectFields())) {
             QueryConditionHelper.applySelectFields(wrapper, param.getSelectFields());
-            applyConditions(wrapper, param);
-            QueryConditionHelper.applyConditions(wrapper, param.getConditions());
-            QueryConditionHelper.applyConditionNode(wrapper, param.getCondition(), createFieldResolver(UserField.values()));
-            wrapper.orderByDesc("create_time_ms");
-            List<UserPO> list = userMapper.selectList(wrapper);
-            return list.stream()
-                    .map(UserConverter.INSTANCE::userPOToUserIDTO)
-                    .collect(Collectors.toList());
         }
-        LambdaQueryWrapper<UserPO> wrapper = new LambdaQueryWrapper<>();
-        applyLambdaConditions(wrapper, param);
-        if (param != null) {
-            QueryConditionHelper.applyConditions(wrapper, param.getConditions());
-            QueryConditionHelper.applyConditionNode(wrapper, param.getCondition(), createFieldResolver(UserField.values()));
-        }
-        wrapper.orderByDesc(UserPO::getCreateTimeMs);
+        applyConditions(wrapper, param);
+        QueryConditionHelper.applyConditions(wrapper, param.getConditions());
+        QueryConditionHelper.applyConditionNode(wrapper, param.getCondition(), createFieldResolver(UserField.values()));
+        wrapper.orderByDesc(UserField.CREATE_TIME_MS.getColumnName());
         List<UserPO> list = userMapper.selectList(wrapper);
         return list.stream()
                 .map(UserConverter.INSTANCE::userPOToUserIDTO)
@@ -131,28 +119,23 @@ public class UserRepositoryImpl implements UserRepository {
 
     @Override
     public long count(SelectUserParam param) {
-        LambdaQueryWrapper<UserPO> wrapper = new LambdaQueryWrapper<>();
-        applyLambdaConditions(wrapper, param);
-        if (param != null) {
-            QueryConditionHelper.applyConditions(wrapper, param.getConditions());
-            QueryConditionHelper.applyConditionNode(wrapper, param.getCondition(), createFieldResolver(UserField.values()));
+        if (ObjectUtil.isEmpty(param)) {
+            throw new BusinessException(ErrorCode.PARAM_IS_EMPTY);
         }
+        QueryWrapper<UserPO> wrapper = new QueryWrapper<>();
+        applyConditions(wrapper, param);
+        QueryConditionHelper.applyConditions(wrapper, param.getConditions());
+        QueryConditionHelper.applyConditionNode(wrapper, param.getCondition(), createFieldResolver(UserField.values()));
         return userMapper.selectCount(wrapper);
     }
 
-    private void applyConditions(QueryWrapper<UserPO> wrapper, SelectUserParam param) {
-        if (param != null) {
-            QueryConditionHelper.applyFieldCondition(wrapper, "username", param.getUsername());
-            QueryConditionHelper.applyFieldCondition(wrapper, "role", param.getRole());
-            QueryConditionHelper.applyFieldCondition(wrapper, "status", param.getStatus());
-        }
+    private void applyConditions(QueryWrapper<UserPO> wrapper, SelectOneUserParam param) {
+        QueryConditionHelper.applyFieldCondition(wrapper, UserField.USERNAME.getColumnName(), param.getUsername());
     }
 
-    private void applyLambdaConditions(LambdaQueryWrapper<UserPO> wrapper, SelectUserParam param) {
-        if (param != null) {
-            QueryConditionHelper.applyFieldCondition(wrapper, UserPO::getUsername, param.getUsername());
-            QueryConditionHelper.applyFieldCondition(wrapper, UserPO::getRole, param.getRole());
-            QueryConditionHelper.applyFieldCondition(wrapper, UserPO::getStatus, param.getStatus());
-        }
+    private void applyConditions(QueryWrapper<UserPO> wrapper, SelectUserParam param) {
+        QueryConditionHelper.applyFieldCondition(wrapper, UserField.USERNAME.getColumnName(), param.getUsername());
+        QueryConditionHelper.applyFieldCondition(wrapper, UserField.ROLE.getColumnName(), param.getRole());
+        QueryConditionHelper.applyFieldCondition(wrapper, UserField.STATUS.getColumnName(), param.getStatus());
     }
 }

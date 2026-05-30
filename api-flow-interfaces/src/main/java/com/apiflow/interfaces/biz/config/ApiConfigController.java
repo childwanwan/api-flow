@@ -4,14 +4,19 @@ import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
 import com.apiflow.application.user.AuthService;
 import com.apiflow.application.config.ApiConfigApplicationService;
-import com.apiflow.application.config.command.ApiConfigDeleteCommand;
-import com.apiflow.application.config.command.ApiConfigDisableCommand;
-import com.apiflow.application.config.command.ApiConfigEnableCommand;
+import com.apiflow.application.config.param.DeleteApiConfigParam;
+import com.apiflow.application.config.param.DisableApiConfigParam;
+import com.apiflow.application.config.param.EnableApiConfigParam;
 import com.apiflow.application.config.dto.ApiConfigDTO;
+import com.apiflow.application.config.param.ApiConfigPageParam;
+import com.apiflow.application.config.param.ListApiConfigParam;
+import com.apiflow.common.exception.BusinessException;
+import com.apiflow.common.exception.ErrorCode;
+import com.apiflow.common.result.PageResult;
 import com.apiflow.common.result.Result;
-import com.apiflow.interfaces.annotation.OpLog;
 import com.apiflow.interfaces.biz.config.converter.ApiConfigConverter;
 import com.apiflow.interfaces.biz.config.request.ApiConfigCreateRequest;
+import com.apiflow.interfaces.biz.config.request.ApiConfigPageRequest;
 import com.apiflow.interfaces.biz.config.request.ApiConfigUpdateRequest;
 import com.apiflow.interfaces.biz.config.vo.ApiConfigVO;
 import com.apiflow.interfaces.util.TokenUtil;
@@ -32,19 +37,19 @@ public class ApiConfigController {
     private final AuthService authService;
 
     @PostMapping("/create")
-    public Result<ApiConfigVO> createConfig(@RequestBody ApiConfigCreateRequest request) {
+    public Result<Void> createConfig(@RequestBody ApiConfigCreateRequest request) {
         validateApiConfigCreateRequest(request);
         log.info("Create config request: {}", request);
-        ApiConfigDTO config = apiConfigApplicationService.createConfig(ApiConfigConverter.INSTANCE.toCreateCommand(request));
-        return Result.success(ApiConfigConverter.INSTANCE.toVO(config));
+        apiConfigApplicationService.createConfig(ApiConfigConverter.INSTANCE.toCreateCommand(request));
+        return Result.success();
     }
 
     @PutMapping("/update")
-    public Result<ApiConfigVO> updateConfig(@RequestBody ApiConfigUpdateRequest request) {
+    public Result<Void> updateConfig(@RequestBody ApiConfigUpdateRequest request) {
         validateApiConfigUpdateRequest(request);
         log.info("Update config request: {}", request);
-        ApiConfigDTO config = apiConfigApplicationService.updateConfig(ApiConfigConverter.INSTANCE.toUpdateCommand(request));
-        return Result.success(ApiConfigConverter.INSTANCE.toVO(config));
+        apiConfigApplicationService.updateConfig(ApiConfigConverter.INSTANCE.toUpdateCommand(request));
+        return Result.success();
     }
 
     @GetMapping("/{apiCode}")
@@ -56,75 +61,80 @@ public class ApiConfigController {
     }
 
     @GetMapping("/list")
-    public Result<List<ApiConfigVO>> listConfigs(
-            @RequestParam(required = false) String groupNo,
-            @RequestParam(required = false) String apiCode,
-            @RequestParam(required = false) String apiName,
-            @RequestParam(required = false) String status,
-            @RequestParam(required = false) Integer limit) {
-        log.info("List configs request: groupNo={}, apiCode={}, apiName={}, status={}, limit={}", groupNo, apiCode, apiName, status, limit);
-        List<ApiConfigDTO> configs = apiConfigApplicationService.listConfigs(groupNo, apiCode, apiName, status, limit);
+    public Result<List<ApiConfigVO>> listConfigs(ListApiConfigParam param) {
+        log.info("List configs request: groupNo={}, apiCode={}, apiName={}, status={}, limit={}", param.getGroupNo(), param.getApiCode(), param.getApiName(), param.getStatus(), param.getLimit());
+        List<ApiConfigDTO> configs = apiConfigApplicationService.listConfigs(param);
         List<ApiConfigVO> vos = configs.stream().map(ApiConfigConverter.INSTANCE::toVO).toList();
         return Result.success(vos);
     }
 
+    @PostMapping("/page")
+    public Result<PageResult<ApiConfigVO>> pageConfigs(@RequestBody ApiConfigPageRequest request) {
+        ApiConfigPageParam pageParam = ApiConfigConverter.INSTANCE.toPageParam(request);
+        PageResult<ApiConfigDTO> pageResult = apiConfigApplicationService.pageConfigs(pageParam);
+        PageResult<ApiConfigVO> voPageResult = PageResult.of(
+            pageResult.getRecords().stream().map(ApiConfigConverter.INSTANCE::toVO).toList(),
+            pageResult.getTotal(),
+            pageResult.getCurrent(),
+            pageResult.getSize()
+        );
+        return Result.success(voPageResult);
+    }
+
     @PostMapping("/{apiCode}/enable")
-    @OpLog(module = "API配置", operation = "启用", detail = "启用API配置")
-    public Result<ApiConfigVO> enableConfig(@PathVariable String apiCode,
+    public Result<Void> enableConfig(@PathVariable String apiCode,
                                             HttpServletRequest request) {
         log.info("Enable config request: apiCode={}", apiCode);
-        ApiConfigEnableCommand command = ApiConfigEnableCommand.builder()
+        EnableApiConfigParam param = EnableApiConfigParam.builder()
                 .apiCode(apiCode)
                 .operator(authService.getUsernameByToken(TokenUtil.getTokenFromCookie(request)))
                 .build();
-        ApiConfigDTO config = apiConfigApplicationService.enableConfig(command);
-        return Result.success(ApiConfigConverter.INSTANCE.toVO(config));
+        apiConfigApplicationService.enableConfig(param);
+        return Result.success();
     }
 
     @PostMapping("/{apiCode}/disable")
-    @OpLog(module = "API配置", operation = "禁用", detail = "禁用API配置")
-    public Result<ApiConfigVO> disableConfig(@PathVariable String apiCode,
+    public Result<Void> disableConfig(@PathVariable String apiCode,
                                              HttpServletRequest request) {
         log.info("Disable config request: apiCode={}", apiCode);
-        ApiConfigDisableCommand command = ApiConfigDisableCommand.builder()
+        DisableApiConfigParam param = DisableApiConfigParam.builder()
                 .apiCode(apiCode)
                 .operator(authService.getUsernameByToken(TokenUtil.getTokenFromCookie(request)))
                 .build();
-        ApiConfigDTO config = apiConfigApplicationService.disableConfig(command);
-        return Result.success(ApiConfigConverter.INSTANCE.toVO(config));
+        apiConfigApplicationService.disableConfig(param);
+        return Result.success();
     }
 
     @DeleteMapping("/{apiCode}")
-    @OpLog(module = "API配置", operation = "删除", detail = "删除API配置")
-    public Result<String> deleteConfig(@PathVariable String apiCode,
+    public Result<Void> deleteConfig(@PathVariable String apiCode,
                                             HttpServletRequest request) {
         log.info("Delete config request: apiCode={}", apiCode);
-        ApiConfigDeleteCommand command = ApiConfigDeleteCommand.builder()
+        DeleteApiConfigParam param = DeleteApiConfigParam.builder()
                 .apiCode(apiCode)
                 .operator(authService.getUsernameByToken(TokenUtil.getTokenFromCookie(request)))
                 .build();
-        apiConfigApplicationService.deleteConfig(command);
-        return Result.success(apiCode);
+        apiConfigApplicationService.deleteConfig(param);
+        return Result.success();
     }
 
 
     private void validateApiConfigCreateRequest(ApiConfigCreateRequest request) {
         if (ObjectUtil.isEmpty(request)) {
-            throw new IllegalArgumentException("request cannot be null");
+            throw new BusinessException(ErrorCode.PARAM_IS_EMPTY);
         }
         request.validate();
     }
 
     private void validateApiConfigUpdateRequest(ApiConfigUpdateRequest request) {
         if (ObjectUtil.isEmpty(request)) {
-            throw new IllegalArgumentException("request cannot be null");
+            throw new BusinessException(ErrorCode.PARAM_IS_EMPTY);
         }
         request.validate();
     }
 
     private void validateApiCode(String apiCode) {
         if (StrUtil.isBlank(apiCode)) {
-            throw new IllegalArgumentException("apiCode cannot be blank");
+            throw new BusinessException(ErrorCode.PARAM_IS_EMPTY);
         }
     }
 

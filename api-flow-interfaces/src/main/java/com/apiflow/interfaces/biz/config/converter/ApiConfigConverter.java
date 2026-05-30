@@ -1,7 +1,8 @@
 package com.apiflow.interfaces.biz.config.converter;
 
-import com.apiflow.application.config.command.ApiConfigCreateCommand;
-import com.apiflow.application.config.command.ApiConfigUpdateCommand;
+import com.apiflow.application.config.param.ApiConfigPageParam;
+import com.apiflow.application.config.param.CreateApiConfigParam;
+import com.apiflow.application.config.param.UpdateApiConfigParam;
 import com.apiflow.application.config.dto.*;
 import com.apiflow.application.task.dto.HttpReceiptDTO;
 import com.apiflow.application.task.dto.MqReceiptDTO;
@@ -9,6 +10,7 @@ import com.apiflow.application.task.dto.ReceiptConfigDTO;
 import com.apiflow.application.task.dto.ReceiptRetryPolicyDTO;
 import com.apiflow.common.util.JsonUtil;
 import com.apiflow.interfaces.biz.config.request.ApiConfigCreateRequest;
+import com.apiflow.interfaces.biz.config.request.ApiConfigPageRequest;
 import com.apiflow.interfaces.biz.config.request.ApiConfigUpdateRequest;
 import com.apiflow.interfaces.biz.config.vo.*;
 import org.mapstruct.Mapper;
@@ -27,7 +29,7 @@ public interface ApiConfigConverter {
     @Mapping(target = "pluginConfig", qualifiedByName = "requestToJson")
     @Mapping(target = "extraConfig", qualifiedByName = "requestToJson")
     @Mapping(target = "receiptConfig", qualifiedByName = "requestToJson")
-    ApiConfigCreateCommand toCreateCommand(ApiConfigCreateRequest request);
+    CreateApiConfigParam toCreateCommand(ApiConfigCreateRequest request);
 
     @Named("toUpdateCommand")
     @Mapping(target = "rateLimitConfig", qualifiedByName = "requestToJson")
@@ -35,7 +37,23 @@ public interface ApiConfigConverter {
     @Mapping(target = "pluginConfig", qualifiedByName = "requestToJson")
     @Mapping(target = "extraConfig", qualifiedByName = "requestToJson")
     @Mapping(target = "receiptConfig", qualifiedByName = "requestToJson")
-    ApiConfigUpdateCommand toUpdateCommand(ApiConfigUpdateRequest request);
+    UpdateApiConfigParam toUpdateCommand(ApiConfigUpdateRequest request);
+
+    default ApiConfigPageParam toPageParam(ApiConfigPageRequest request) {
+        if (request == null) {
+            return null;
+        }
+        ApiConfigPageParam param = new ApiConfigPageParam();
+        param.setCurrent(request.getEffectiveCurrent());
+        param.setSize(request.getEffectiveSize());
+        param.setSortOrderList(request.getSortOrderList());
+        param.setGroupNo(request.getGroupNo());
+        param.setGroupNoLike(request.getGroupNoLike());
+        param.setApiCodeLike(request.getApiCodeLike());
+        param.setApiNameLike(request.getApiNameLike());
+        param.setStatus(request.getStatus());
+        return param;
+    }
 
     @Named("toVO")
     @Mapping(target = "rateLimitConfig", source = "rateLimitConfig")

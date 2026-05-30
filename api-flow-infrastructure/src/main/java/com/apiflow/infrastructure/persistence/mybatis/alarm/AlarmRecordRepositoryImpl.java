@@ -1,19 +1,24 @@
 package com.apiflow.infrastructure.persistence.mybatis.alarm;
 
+import cn.hutool.core.util.ObjectUtil;
 import com.apiflow.api.repository.alarm.AlarmRecordRepository;
 import com.apiflow.api.repository.alarm.idto.AlarmRecordIDTO;
+import com.apiflow.api.repository.alarm.param.AlarmRecordField;
 import com.apiflow.api.repository.alarm.param.SaveAlarmRecordParam;
 import com.apiflow.api.repository.alarm.param.SelectAlarmRecordParam;
+import com.apiflow.common.exception.BusinessException;
+import com.apiflow.common.exception.ErrorCode;
+import com.apiflow.infrastructure.persistence.mybatis.alarm.converter.AlarmRecordConverter;
 import com.apiflow.infrastructure.persistence.mybatis.alarm.entity.AlarmRecordPO;
 import com.apiflow.infrastructure.persistence.mybatis.util.QueryConditionHelper;
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.stream.Collectors;
 
-import static com.apiflow.infrastructure.persistence.mybatis.util.QueryConditionHelper.createSimpleFieldResolver;
+import static com.apiflow.infrastructure.persistence.mybatis.util.QueryConditionHelper.createFieldResolver;
 
 @Repository
 @RequiredArgsConstructor
@@ -22,45 +27,24 @@ public class AlarmRecordRepositoryImpl implements AlarmRecordRepository {
     private final AlarmRecordMapper alarmRecordMapper;
 
     @Override
-    public AlarmRecordIDTO save(SaveAlarmRecordParam param) {
-        AlarmRecordPO po = AlarmRecordPO.builder()
-                .eventType(param.getEventType())
-                .level(param.getLevel())
-                .message(param.getMessage())
-                .detail(param.getDetail())
-                .taskNo(param.getTaskNo())
-                .apiCode(param.getApiCode())
-                .createTimeMs(param.getCreateTimeMs())
-                .build();
+    public void save(SaveAlarmRecordParam param) {
+        AlarmRecordPO po = AlarmRecordConverter.INSTANCE.saveParamToPO(param);
         alarmRecordMapper.insert(po);
-        return toIDTO(po);
     }
 
     @Override
     public List<AlarmRecordIDTO> selectList(SelectAlarmRecordParam param) {
-        LambdaQueryWrapper<AlarmRecordPO> wrapper = new LambdaQueryWrapper<>();
-        QueryConditionHelper.applyFieldCondition(wrapper, AlarmRecordPO::getEventType, param.getEventType());
-        QueryConditionHelper.applyFieldCondition(wrapper, AlarmRecordPO::getLevel, param.getLevel());
-        QueryConditionHelper.applyFieldCondition(wrapper, AlarmRecordPO::getCreateTimeMs, param.getCreateTimeMs());
-        QueryConditionHelper.applyConditionNode(wrapper, param.getCondition(), createSimpleFieldResolver());
-        wrapper.orderByDesc(AlarmRecordPO::getCreateTimeMs);
-        if (param.getLimit() != null) {
-            wrapper.last("LIMIT " + param.getLimit());
+        if (ObjectUtil.isEmpty(param)) {
+            throw new BusinessException(ErrorCode.PARAM_IS_EMPTY);
         }
+        QueryWrapper<AlarmRecordPO> wrapper = new QueryWrapper<>();
+        QueryConditionHelper.applyFieldCondition(wrapper, AlarmRecordField.EVENT_TYPE.getColumnName(), param.getEventType());
+        QueryConditionHelper.applyFieldCondition(wrapper, AlarmRecordField.LEVEL.getColumnName(), param.getLevel());
+        QueryConditionHelper.applyFieldCondition(wrapper, AlarmRecordField.CREATE_TIME_MS.getColumnName(), param.getCreateTimeMs());
+        QueryConditionHelper.applyConditionNode(wrapper, param.getCondition(), createFieldResolver(AlarmRecordField.values()));
+        wrapper.orderByDesc(AlarmRecordField.CREATE_TIME_MS.getColumnName());
+        wrapper.last("LIMIT " + param.getEffectiveLimit());
         List<AlarmRecordPO> list = alarmRecordMapper.selectList(wrapper);
-        return list.stream().map(this::toIDTO).collect(Collectors.toList());
-    }
-
-    private AlarmRecordIDTO toIDTO(AlarmRecordPO po) {
-        return AlarmRecordIDTO.builder()
-                .id(po.getId())
-                .eventType(po.getEventType())
-                .level(po.getLevel())
-                .message(po.getMessage())
-                .detail(po.getDetail())
-                .taskNo(po.getTaskNo())
-                .apiCode(po.getApiCode())
-                .createTimeMs(po.getCreateTimeMs())
-                .build();
+        return list.stream().map(AlarmRecordConverter.INSTANCE::poToIDTO).collect(Collectors.toList());
     }
 }

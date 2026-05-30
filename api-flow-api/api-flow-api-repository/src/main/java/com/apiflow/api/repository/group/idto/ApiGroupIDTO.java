@@ -20,4 +20,5 @@ public class ApiGroupIDTO {
     private String createOperator;
     private String updateOperator;
     private Integer version;
+    private Integer apiCount;
 }

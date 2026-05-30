@@ -1,18 +1,28 @@
 package com.apiflow.application.plugin;
 
+import cn.hutool.core.util.StrUtil;
 import com.apiflow.api.repository.plugin.PluginConfigRepository;
 import com.apiflow.api.repository.plugin.idto.PluginConfigIDTO;
 import com.apiflow.api.repository.plugin.param.SavePluginConfigParam;
 import com.apiflow.api.repository.plugin.param.SelectOnePluginConfigParam;
 import com.apiflow.api.repository.plugin.param.SelectPluginConfigParam;
-import com.apiflow.api.repository.plugin.param.UpdatePluginConfigParam;
+import com.apiflow.application.plugin.converter.PluginConfigConverter;
+import com.apiflow.application.plugin.param.CreatePluginConfigParam;
+import com.apiflow.application.plugin.param.DeletePluginConfigParam;
+import com.apiflow.application.plugin.param.DisablePluginConfigParam;
+import com.apiflow.application.plugin.param.EnablePluginConfigParam;
+import com.apiflow.application.plugin.param.GetPluginConfigParam;
+import com.apiflow.application.plugin.param.ListPluginConfigParam;
+import com.apiflow.application.plugin.param.UpdatePluginConfigParam;
 import com.apiflow.common.exception.BusinessException;
 import com.apiflow.common.exception.ErrorCode;
 import com.apiflow.common.repository.FieldCondition;
 import com.apiflow.domain.plugin.PluginChainExecutor;
+import com.apiflow.domain.plugin.service.PluginConfigDomainService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.util.List;
 
@@ -21,108 +31,80 @@ import java.util.List;
 @RequiredArgsConstructor
 public class PluginConfigApplicationService {
 
+    private static final PluginConfigConverter CONVERTER = PluginConfigConverter.INSTANCE;
+
     private final PluginConfigRepository pluginConfigRepository;
+    private final PluginConfigDomainService pluginConfigDomainService;
     private final PluginChainExecutor pluginChainExecutor;
+    private final TransactionTemplate transactionTemplate;
 
-    public PluginConfigIDTO createPlugin(String pluginCode, String pluginName, String pluginClass,
-                                          String description, String config, Boolean enabled, Integer orderNum) {
-        SelectOnePluginConfigParam param = SelectOnePluginConfigParam.builder()
-                .pluginCode(FieldCondition.of(pluginCode)).build();
-        PluginConfigIDTO existing = pluginConfigRepository.selectOne(param);
-        if (existing != null && !Boolean.TRUE.equals(existing.getDeleted())) {
-            throw new BusinessException(ErrorCode.PARAM_VALIDATION_FAILED, "插件编码已存在");
-        }
+    public PluginConfigIDTO createPlugin(CreatePluginConfigParam param) {
+        pluginConfigDomainService.validatePluginCodeNotExists(param.getPluginCode());
 
-        long now = System.currentTimeMillis();
-        SavePluginConfigParam saveParam = SavePluginConfigParam.builder()
-                .pluginCode(pluginCode)
-                .pluginName(pluginName)
-                .pluginClass(pluginClass)
-                .description(description)
-                .config(config)
-                .enabled(enabled != null ? enabled : true)
-                .orderNum(orderNum != null ? orderNum : 0)
-                .createTimeMs(now)
-                .updateTimeMs(now)
-                .build();
-        return pluginConfigRepository.save(saveParam);
+        SavePluginConfigParam saveParam = CONVERTER.toSaveParam(param);
+        transactionTemplate.executeWithoutResult(status -> {
+            pluginConfigRepository.save(saveParam);
+        });
+        SelectOnePluginConfigParam queryParam = SelectOnePluginConfigParam.builder()
+                .pluginCode(FieldCondition.of(param.getPluginCode())).build();
+        return pluginConfigRepository.selectOne(queryParam);
     }
 
-    public PluginConfigIDTO updatePlugin(String pluginCode, String pluginName, String pluginClass,
-                                          String description, String config, Boolean enabled, Integer orderNum) {
-        SelectOnePluginConfigParam param = SelectOnePluginConfigParam.builder()
-                .pluginCode(FieldCondition.of(pluginCode)).build();
-        PluginConfigIDTO existing = pluginConfigRepository.selectOne(param);
+    public PluginConfigIDTO updatePlugin(UpdatePluginConfigParam param) {
+        SelectOnePluginConfigParam queryParam = SelectOnePluginConfigParam.builder()
+                .pluginCode(FieldCondition.of(param.getPluginCode())).build();
+        PluginConfigIDTO existing = pluginConfigRepository.selectOne(queryParam);
         if (existing == null || Boolean.TRUE.equals(existing.getDeleted())) {
             throw new BusinessException(ErrorCode.PLUGIN_NOT_FOUND);
         }
 
-        UpdatePluginConfigParam updateParam = UpdatePluginConfigParam.builder()
-                .id(existing.getId())
-                .pluginCode(pluginCode)
-                .pluginName(pluginName)
-                .pluginClass(pluginClass)
-                .description(description)
-                .config(config)
-                .enabled(enabled)
-                .orderNum(orderNum)
-                .updateTimeMs(System.currentTimeMillis())
-                .build();
-        return pluginConfigRepository.update(updateParam);
+        com.apiflow.api.repository.plugin.param.UpdatePluginConfigParam updateParam = CONVERTER.toUpdateParam(existing.getId(), param);
+        transactionTemplate.executeWithoutResult(status -> {
+            pluginConfigRepository.update(updateParam);
+        });
+        return pluginConfigRepository.selectOne(queryParam);
     }
 
-    public PluginConfigIDTO getPlugin(String pluginCode) {
-        SelectOnePluginConfigParam param = SelectOnePluginConfigParam.builder()
-                .pluginCode(FieldCondition.of(pluginCode)).build();
-        PluginConfigIDTO plugin = pluginConfigRepository.selectOne(param);
-        if (plugin == null || Boolean.TRUE.equals(plugin.getDeleted())) {
-            throw new BusinessException(ErrorCode.PLUGIN_NOT_FOUND);
-        }
-        return plugin;
+    public PluginConfigIDTO getPlugin(GetPluginConfigParam param) {
+        return pluginConfigDomainService.requireExistingPlugin(param.getPluginCode());
     }
 
-    public List<PluginConfigIDTO> listPlugins(String pluginCode, String pluginName) {
+    public List<PluginConfigIDTO> listPlugins(ListPluginConfigParam param) {
         SelectPluginConfigParam.SelectPluginConfigParamBuilder builder = SelectPluginConfigParam.builder();
-        if (pluginCode != null) {
-            builder.pluginCode(FieldCondition.<String>builder().like(pluginCode).build());
+        if (StrUtil.isNotEmpty(param.getPluginCode())) {
+            builder.pluginCode(FieldCondition.<String>builder().like(param.getPluginCode()).build());
         }
-        if (pluginName != null) {
-            builder.pluginName(FieldCondition.<String>builder().like(pluginName).build());
+        if (StrUtil.isNotEmpty(param.getPluginName())) {
+            builder.pluginName(FieldCondition.<String>builder().like(param.getPluginName()).build());
         }
         return pluginConfigRepository.selectList(builder.build());
     }
 
-    public void deletePlugin(String pluginCode) {
-        SelectOnePluginConfigParam param = SelectOnePluginConfigParam.builder()
-                .pluginCode(FieldCondition.of(pluginCode)).build();
-        PluginConfigIDTO existing = pluginConfigRepository.selectOne(param);
-        if (existing == null || Boolean.TRUE.equals(existing.getDeleted())) {
-            throw new BusinessException(ErrorCode.PLUGIN_NOT_FOUND);
-        }
-        pluginChainExecutor.unregisterPlugin(pluginCode);
+    public void deletePlugin(DeletePluginConfigParam param) {
+        pluginConfigDomainService.requireExistingPlugin(param.getPluginCode());
+        transactionTemplate.executeWithoutResult(status -> {
+            pluginChainExecutor.unregisterPlugin(param.getPluginCode());
+        });
     }
 
-    public PluginConfigIDTO enablePlugin(String pluginCode) {
-        return updatePluginEnabled(pluginCode, true);
+    public PluginConfigIDTO enablePlugin(EnablePluginConfigParam param) {
+        return updatePluginEnabled(param.getPluginCode(), true);
     }
 
-    public PluginConfigIDTO disablePlugin(String pluginCode) {
-        return updatePluginEnabled(pluginCode, false);
+    public PluginConfigIDTO disablePlugin(DisablePluginConfigParam param) {
+        return updatePluginEnabled(param.getPluginCode(), false);
     }
 
     private PluginConfigIDTO updatePluginEnabled(String pluginCode, boolean enabled) {
-        SelectOnePluginConfigParam param = SelectOnePluginConfigParam.builder()
-                .pluginCode(FieldCondition.of(pluginCode)).build();
-        PluginConfigIDTO existing = pluginConfigRepository.selectOne(param);
-        if (existing == null || Boolean.TRUE.equals(existing.getDeleted())) {
-            throw new BusinessException(ErrorCode.PLUGIN_NOT_FOUND);
-        }
+        PluginConfigIDTO existing = pluginConfigDomainService.requireExistingPlugin(pluginCode);
 
-        UpdatePluginConfigParam updateParam = UpdatePluginConfigParam.builder()
-                .id(existing.getId())
-                .enabled(enabled)
-                .updateTimeMs(System.currentTimeMillis())
-                .build();
-        return pluginConfigRepository.update(updateParam);
+        com.apiflow.api.repository.plugin.param.UpdatePluginConfigParam updateParam =
+                CONVERTER.toEnabledUpdateParam(existing.getId(), enabled);
+        transactionTemplate.executeWithoutResult(status -> {
+            pluginConfigRepository.update(updateParam);
+        });
+        SelectOnePluginConfigParam queryParam = SelectOnePluginConfigParam.builder()
+                .pluginCode(FieldCondition.of(pluginCode)).build();
+        return pluginConfigRepository.selectOne(queryParam);
     }
 }

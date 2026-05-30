@@ -108,7 +108,6 @@ public class TaskPO {
     private Boolean deleted;
 
     @TableField("version")
-    @Version
     private Integer version;
 
 }

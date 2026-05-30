@@ -1,13 +1,10 @@
 package com.apiflow.domain.config.converter;
 
 import com.apiflow.api.repository.config.idto.*;
-import com.apiflow.api.repository.config.param.*;
 import com.apiflow.api.repository.task.idto.TaskHttpReceiptIDTO;
 import com.apiflow.api.repository.task.idto.TaskMqReceiptIDTO;
 import com.apiflow.api.repository.task.idto.TaskReceiptConfigIDTO;
 import com.apiflow.api.repository.task.idto.TaskReceiptRetryPolicyIDTO;
-import com.apiflow.api.repository.task.param.SaveTaskReceiptConfigParam;
-import com.apiflow.api.repository.task.param.UpdateTaskReceiptConfigParam;
 import com.apiflow.common.util.JsonUtil;
 import com.apiflow.domain.config.model.*;
 import com.apiflow.domain.task.model.HttpReceipt;
@@ -31,22 +28,6 @@ public interface ApiConfigConverter {
     @Mapping(target = "receiptConfig", qualifiedByName = "receiptConfigIDTOToDomain")
     @Mapping(target = "extraConfig", qualifiedByName = "extraConfigIDTOToDomain")
     ApiConfig apiConfigIDTOToApiConfig(ApiConfigIDTO dto);
-
-    @Named("apiConfigToSaveApiConfigParam")
-    @Mapping(target = "rateLimitConfig", qualifiedByName = "rateLimitConfigToSaveParam")
-    @Mapping(target = "filterRules", qualifiedByName = "filterRulesToSaveParam")
-    @Mapping(target = "pluginConfig", qualifiedByName = "pluginConfigToSaveParam")
-    @Mapping(target = "receiptConfig", qualifiedByName = "receiptConfigToSaveParam")
-    @Mapping(target = "extraConfig", qualifiedByName = "extraConfigToSaveParam")
-    SaveApiConfigParam apiConfigToSaveApiConfigParam(ApiConfig config);
-
-    @Named("apiConfigToUpdateApiConfigParam")
-    @Mapping(target = "rateLimitConfig", qualifiedByName = "rateLimitConfigToUpdateParam")
-    @Mapping(target = "filterRules", qualifiedByName = "filterRulesToUpdateParam")
-    @Mapping(target = "pluginConfig", qualifiedByName = "pluginConfigToUpdateParam")
-    @Mapping(target = "receiptConfig", qualifiedByName = "receiptConfigToUpdateParam")
-    @Mapping(target = "extraConfig", qualifiedByName = "extraConfigToUpdateParam")
-    UpdateApiConfigParam apiConfigToUpdateApiConfigParam(ApiConfig config);
 
     @Named("rateLimitConfigIDTOToDomain")
     RateLimitConfig rateLimitConfigIDTOToDomain(ApiConfigRateLimitConfigIDTO dto);
@@ -80,54 +61,6 @@ public interface ApiConfigConverter {
 
     @Named("retryPolicyIDTOToDomain")
     ReceiptRetryPolicy retryPolicyIDTOToDomain(TaskReceiptRetryPolicyIDTO dto);
-
-    @Named("rateLimitConfigToSaveParam")
-    SaveApiConfigRateLimitConfigParam rateLimitConfigToSaveParam(RateLimitConfig config);
-
-    @Named("rateLimitRuleToSaveParam")
-    SaveApiConfigRateLimitRuleParam rateLimitRuleToSaveParam(RateLimitRule rule);
-
-    @Named("filterRulesToSaveParam")
-    SaveApiConfigFilterRulesParam filterRulesToSaveParam(FilterRules rules);
-
-    @Named("filterRuleToSaveParam")
-    SaveApiConfigFilterRuleParam filterRuleToSaveParam(FilterRule rule);
-
-    @Named("pluginConfigToSaveParam")
-    SaveApiConfigPluginConfigParam pluginConfigToSaveParam(PluginConfig config);
-
-    @Named("pluginChainItemToSaveParam")
-    SaveApiConfigPluginChainItemParam pluginChainItemToSaveParam(PluginChainItem item);
-
-    @Named("extraConfigToSaveParam")
-    SaveApiConfigExtraConfigParam extraConfigToSaveParam(ExtraConfig config);
-
-    @Named("receiptConfigToSaveParam")
-    SaveTaskReceiptConfigParam receiptConfigToSaveParam(ReceiptConfig config);
-
-    @Named("rateLimitConfigToUpdateParam")
-    UpdateApiConfigRateLimitConfigParam rateLimitConfigToUpdateParam(RateLimitConfig config);
-
-    @Named("rateLimitRuleToUpdateParam")
-    UpdateApiConfigRateLimitRuleParam rateLimitRuleToUpdateParam(RateLimitRule rule);
-
-    @Named("filterRulesToUpdateParam")
-    UpdateApiConfigFilterRulesParam filterRulesToUpdateParam(FilterRules rules);
-
-    @Named("filterRuleToUpdateParam")
-    UpdateApiConfigFilterRuleParam filterRuleToUpdateParam(FilterRule rule);
-
-    @Named("pluginConfigToUpdateParam")
-    UpdateApiConfigPluginConfigParam pluginConfigToUpdateParam(PluginConfig config);
-
-    @Named("pluginChainItemToUpdateParam")
-    UpdateApiConfigPluginChainItemParam pluginChainItemToUpdateParam(PluginChainItem item);
-
-    @Named("extraConfigToUpdateParam")
-    UpdateApiConfigExtraConfigParam extraConfigToUpdateParam(ExtraConfig config);
-
-    @Named("receiptConfigToUpdateParam")
-    UpdateTaskReceiptConfigParam receiptConfigToUpdateParam(ReceiptConfig config);
 
     default String map(Object value) {
         if (value == null) {

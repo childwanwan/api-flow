@@ -10,12 +10,16 @@ import java.util.List;
 
 public interface TaskRepository {
 
-    TaskIDTO save(SaveTaskParam param);
+    TaskIDTO findByTaskNo(String taskNo);
 
-    TaskIDTO update(UpdateTaskParam param);
+    void save(SaveTaskParam param);
+
+    void update(UpdateTaskParam param);
 
     TaskIDTO selectOne(SelectOneTaskParam param);
 
     List<TaskIDTO> selectList(SelectTaskParam param);
+
+    long count(SelectTaskParam param);
 
 }

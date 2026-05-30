@@ -14,6 +14,7 @@ public enum ErrorCode {
 
     PAGE_PARAM_IS_EMPTY("20001", "分页参数不能为空"),
     PAGE_SIZE_TOO_LARGE("20002", "每页大小不能超过1000"),
+    DATA_TOO_LARGE("20003", "单次操作不能超过1000条数据"),
 
 
     GROUP_CODE_EXIST("30001", "分组编码已存在"),
@@ -22,6 +23,7 @@ public enum ErrorCode {
     GROUP_CODE_TOO_LONG("30004", "分组编码长度不能超过64个字符"),
     GROUP_NAME_TOO_LONG("30005", "分组名称长度不能超过128个字符"),
     GROUP_DESCRIPTION_TOO_LONG("30006", "分组描述长度不能超过512个字符"),
+    GROUP_HAS_API("30007", "该分组下存在API配置，请先移除或转移后再删除"),
 
 
 

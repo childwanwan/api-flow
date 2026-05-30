@@ -14,6 +14,7 @@ import com.apiflow.common.enums.CompensateStatus;
 import com.apiflow.common.enums.TaskStatus;
 import com.apiflow.common.exception.BusinessException;
 import com.apiflow.common.exception.ErrorCode;
+import com.apiflow.common.repository.ConditionNode;
 import com.apiflow.common.repository.FieldCondition;
 import com.apiflow.common.util.JsonUtil;
 import com.apiflow.common.util.TraceContext;
@@ -286,7 +287,7 @@ public class ApiFlowTaskScheduler {
 
             saveTaskLog(taskNo, "EXECUTE_SUCCESS", Map.of("status", "SUCCESS"));
 
-            receiptService.sendReceipt(buildTaskDO(taskDto), null);
+            receiptService.sendReceipt(buildTask(taskDto), null);
 
         } catch (BusinessException e) {
             handleTaskFailure(taskDto, e);
@@ -309,7 +310,7 @@ public class ApiFlowTaskScheduler {
         ApiConfig config = null;
         try {
             SelectOneApiConfigParam configParam = SelectOneApiConfigParam.builder()
-                    .apiCode(FieldCondition.of(taskDto.getApiCode())).build();
+                    .condition(ConditionNode.eq("apiCode", taskDto.getApiCode())).build();
             ApiConfigIDTO configDto = apiConfigRepository.selectOne(configParam);
             if (configDto != null && !Boolean.TRUE.equals(configDto.getDeleted())) {
                 config = API_CONFIG_CONVERTER.apiConfigIDTOToApiConfig(configDto);
@@ -408,8 +409,8 @@ public class ApiFlowTaskScheduler {
         }
     }
 
-    private TaskDO buildTaskDO(TaskIDTO dto) {
-        return TaskDO.builder()
+    private Task buildTask(TaskIDTO dto) {
+        return Task.builder()
                 .id(dto.getId())
                 .taskNo(dto.getTaskNo())
                 .apiCode(dto.getApiCode())

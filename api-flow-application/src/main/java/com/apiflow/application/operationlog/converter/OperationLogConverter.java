@@ -1,5 +1,6 @@
 package com.apiflow.application.operationlog.converter;
 
+import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
 import com.apiflow.api.repository.operationlog.idto.OperationLogIDTO;
@@ -8,14 +9,12 @@ import com.apiflow.api.repository.operationlog.param.OrderBy;
 import com.apiflow.api.repository.operationlog.param.SaveOperationLogParam;
 import com.apiflow.api.repository.operationlog.param.SelectPageOperationLogParam;
 import com.apiflow.application.operationlog.dto.OperationLogDTO;
-import com.apiflow.application.operationlog.param.OperationLogCreateParam;
-import com.apiflow.application.operationlog.param.OperationLogPageParam;
+import com.apiflow.application.operationlog.param.CreateOperationLogParam;
+import com.apiflow.application.operationlog.param.PageOperationLogParam;
 import com.apiflow.common.dto.SortOrder;
 import com.apiflow.common.repository.ConditionNode;
 import org.mapstruct.Mapper;
-import org.mapstruct.Mapping;
 import org.mapstruct.factory.Mappers;
-import org.springframework.util.CollectionUtils;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -26,14 +25,13 @@ import java.util.stream.Collectors;
 public interface OperationLogConverter {
     OperationLogConverter INSTANCE = Mappers.getMapper(OperationLogConverter.class);
 
-    SaveOperationLogParam operationLogCreateParam2SaveOperationLogParam(OperationLogCreateParam param);
+    SaveOperationLogParam toSaveParam(CreateOperationLogParam param);
 
-    @Mapping(target = "showDetail", source = "showDetail")
-    OperationLogDTO operationLogIDTO2OperationLogDTO(OperationLogIDTO idto);
+    OperationLogDTO toDTO(OperationLogIDTO idto);
 
-    List<OperationLogDTO> operationLogIDTO2OperationLogDTOList(List<OperationLogIDTO> list);
+    List<OperationLogDTO> toDTOList(List<OperationLogIDTO> list);
 
-    default SelectPageOperationLogParam operationLogPageParam2SelectPageOperationLogParam(OperationLogPageParam param) {
+    default SelectPageOperationLogParam pageParam2SelectPageParam(PageOperationLogParam param) {
         if (ObjectUtil.isEmpty(param)) {
             return null;
         }
@@ -54,13 +52,13 @@ public interface OperationLogConverter {
         paramBuilder.current(param.getEffectiveCurrent()).size(param.getEffectiveSize());
 
         List<OrderBy> orders = convertSortOrderList(param.getSortOrderList());
-        if (!CollectionUtils.isEmpty(orders)) {
+        if (CollUtil.isNotEmpty(orders)) {
             paramBuilder.orders(orders);
         }
         return paramBuilder.build();
     }
 
-    private ConditionNode buildConditionNode(OperationLogPageParam param) {
+    private ConditionNode buildConditionNode(PageOperationLogParam param) {
         List<ConditionNode> nodes = new ArrayList<>();
         if (StrUtil.isNotEmpty(param.getBizCode())) {
             nodes.add(ConditionNode.eq(OperationLogField.BIZ_CODE.getFieldName(), param.getBizCode()));
@@ -86,7 +84,7 @@ public interface OperationLogConverter {
     }
 
     private List<OrderBy> convertSortOrderList(List<SortOrder> sortOrderList) {
-        if (CollectionUtils.isEmpty(sortOrderList)) {
+        if (CollUtil.isEmpty(sortOrderList)) {
             return List.of(OrderBy.desc(OperationLogField.CREATE_TIME_MS), OrderBy.desc(OperationLogField.ID));
         }
 

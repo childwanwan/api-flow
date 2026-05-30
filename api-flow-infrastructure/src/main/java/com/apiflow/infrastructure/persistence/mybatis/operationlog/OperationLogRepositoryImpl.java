@@ -3,6 +3,10 @@ package com.apiflow.infrastructure.persistence.mybatis.operationlog;
 import com.apiflow.api.repository.operationlog.OperationLogRepository;
 import com.apiflow.api.repository.operationlog.idto.OperationLogIDTO;
 import com.apiflow.api.repository.operationlog.param.*;
+import com.apiflow.common.exception.BusinessException;
+import com.apiflow.common.exception.ErrorCode;
+import cn.hutool.core.collection.CollUtil;
+import cn.hutool.core.util.ObjectUtil;
 import com.apiflow.common.repository.ConditionNode;
 import com.apiflow.common.result.PageResult;
 import com.apiflow.infrastructure.persistence.mybatis.operationlog.converter.OperationLogConverter;
@@ -27,21 +31,37 @@ public class OperationLogRepositoryImpl implements OperationLogRepository {
     private final OperationLogMapper operationLogMapper;
 
     @Override
-    public OperationLogIDTO save(SaveOperationLogParam param) {
+    public void save(SaveOperationLogParam param) {
         OperationLogPO po = OperationLogConverter.INSTANCE.saveParamToPO(param);
         operationLogMapper.insert(po);
-        return OperationLogConverter.INSTANCE.poToIDTO(po);
+    }
+
+    @Override
+    public OperationLogIDTO selectOne(SelectOneOperationLogParam param) {
+        if (ObjectUtil.isEmpty(param) || param.isEmpty()) {
+            throw new BusinessException(ErrorCode.PARAM_IS_EMPTY);
+        }
+        QueryWrapper<OperationLogPO> wrapper = new QueryWrapper<>();
+        QueryConditionHelper.applySelectFields(wrapper, param.getSelectFields());
+        applyCondition(wrapper, param.getCondition());
+        wrapper.orderByDesc(OperationLogField.ID.getColumnName()).last("LIMIT 1");
+        List<OperationLogPO> list = operationLogMapper.selectList(wrapper);
+        if (CollUtil.isEmpty(list)) {
+            return null;
+        }
+        return OperationLogConverter.INSTANCE.poToIDTO(list.get(0));
     }
 
     @Override
     public List<OperationLogIDTO> selectList(SelectOperationLogParam param) {
+        if (ObjectUtil.isEmpty(param) || CollUtil.isEmpty(param.getSelectFields())) {
+            throw new BusinessException(ErrorCode.PARAM_IS_EMPTY);
+        }
         QueryWrapper<OperationLogPO> wrapper = new QueryWrapper<>();
         QueryConditionHelper.applySelectFields(wrapper, param.getSelectFields());
         applyCondition(wrapper, param.getCondition());
-        wrapper.orderByDesc("create_time_ms");
-        if (param.getLimit() != null) {
-            wrapper.last("LIMIT " + param.getLimit());
-        }
+        wrapper.orderByDesc(OperationLogField.CREATE_TIME_MS.getColumnName());
+        wrapper.last("LIMIT " + param.getEffectiveLimit());
         List<OperationLogPO> list = operationLogMapper.selectList(wrapper);
         return list.stream()
                 .map(OperationLogConverter.INSTANCE::poToIDTO)
@@ -57,6 +77,9 @@ public class OperationLogRepositoryImpl implements OperationLogRepository {
 
     @Override
     public PageResult<OperationLogIDTO> selectPage(SelectPageOperationLogParam param) {
+        if (ObjectUtil.isEmpty(param) || CollUtil.isEmpty(param.getSelectFields())) {
+            throw new BusinessException(ErrorCode.PARAM_IS_EMPTY);
+        }
         QueryWrapper<OperationLogPO> wrapper = new QueryWrapper<>();
         QueryConditionHelper.applySelectFields(wrapper, param.getSelectFields());
         applyCondition(wrapper, param.getCondition());
@@ -73,8 +96,8 @@ public class OperationLogRepositoryImpl implements OperationLogRepository {
 
     private void applySorting(QueryWrapper<OperationLogPO> wrapper, SelectPageOperationLogParam param) {
         List<OrderBy> orders = param.getOrders();
-        if (orders == null || orders.isEmpty()) {
-            wrapper.orderByDesc("create_time_ms").orderByDesc("id");
+        if (CollUtil.isEmpty(orders)) {
+            wrapper.orderByDesc(OperationLogField.CREATE_TIME_MS.getColumnName()).orderByDesc(OperationLogField.ID.getColumnName());
             return;
         }
 

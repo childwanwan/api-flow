@@ -5,12 +5,16 @@ import com.apiflow.api.repository.config.param.*;
 import com.apiflow.api.repository.task.idto.TaskReceiptConfigIDTO;
 import com.apiflow.api.repository.task.param.SaveTaskReceiptConfigParam;
 import com.apiflow.api.repository.task.param.UpdateTaskReceiptConfigParam;
+import com.apiflow.common.result.PageResult;
 import com.apiflow.common.util.JsonUtil;
 import com.apiflow.infrastructure.persistence.mybatis.config.entity.ApiConfigPO;
+import com.baomidou.mybatisplus.core.metadata.IPage;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.Named;
 import org.mapstruct.factory.Mappers;
+
+import java.util.stream.Collectors;
 
 @Mapper
 public interface ApiConfigConverter {
@@ -115,5 +119,20 @@ public interface ApiConfigConverter {
     @Mapping(target = "receiptConfig", qualifiedByName = "jsonToTaskReceiptConfigIDTO")
     @Mapping(target = "extraConfig", qualifiedByName = "jsonToApiConfigExtraConfigIDTO")
     ApiConfigIDTO apiConfigEntityPOToApiConfigIDTO(ApiConfigPO configPO);
+
+    default PageResult<ApiConfigIDTO> apiConfigPOIPage2PageResult(IPage<ApiConfigPO> result) {
+        if (result == null) {
+            return null;
+        }
+        return PageResult.<ApiConfigIDTO>builder()
+                .records(result.getRecords().stream()
+                        .map(this::apiConfigEntityPOToApiConfigIDTO)
+                        .collect(Collectors.toList()))
+                .total(result.getTotal())
+                .size(result.getSize())
+                .current(result.getCurrent())
+                .pages(result.getPages())
+                .build();
+    }
 
 }
